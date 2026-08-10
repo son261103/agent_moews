@@ -9,5 +9,6 @@ def setup_langsmith(settings: Settings) -> None:
         return
     if settings.langsmith_api_key:
         os.environ["LANGSMITH_TRACING"] = "true"
+        os.environ["LANGSMITH_ENDPOINT"] = settings.langsmith_endpoint
         os.environ["LANGSMITH_API_KEY"] = settings.langsmith_api_key
         os.environ["LANGSMITH_PROJECT"] = settings.langsmith_project

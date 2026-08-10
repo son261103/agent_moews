@@ -6,6 +6,7 @@ def test_setup_langsmith_sets_env_vars(monkeypatch):
     from src.observability.langsmith import setup_langsmith
 
     monkeypatch.delenv("LANGSMITH_TRACING", raising=False)
+    monkeypatch.delenv("LANGSMITH_ENDPOINT", raising=False)
     monkeypatch.delenv("LANGSMITH_API_KEY", raising=False)
     monkeypatch.delenv("LANGSMITH_PROJECT", raising=False)
 
@@ -15,11 +16,13 @@ def test_setup_langsmith_sets_env_vars(monkeypatch):
         langsmith_api_key="ls-test",
         langsmith_tracing=True,
         langsmith_project="agent-moew",
+        langsmith_endpoint="https://api.smith.langchain.com",
     )
     result = setup_langsmith(test_settings)
 
     assert result is None
     assert os.environ.get("LANGSMITH_TRACING") == "true"
+    assert os.environ.get("LANGSMITH_ENDPOINT") == "https://api.smith.langchain.com"
     assert os.environ.get("LANGSMITH_API_KEY") == "ls-test"
     assert os.environ.get("LANGSMITH_PROJECT") == "agent-moew"
 

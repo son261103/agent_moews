@@ -16,10 +16,12 @@ class Settings(BaseSettings):
     # LangSmith
     langsmith_tracing: bool = True
     langsmith_project: str = "agent-moew"
+    langsmith_endpoint: str = "https://api.smith.langchain.com"
 
     # Models
     default_model: str = "gpt-4o"
     fast_model: str = "gpt-4o-mini"
+    llm_base_url: Optional[str] = None
 
     # Paths
     db_path: str = "data/agent_moew.db"
