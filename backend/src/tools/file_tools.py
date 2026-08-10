@@ -2,6 +2,8 @@ import os
 
 from langchain_core.tools import tool
 
+from src.tools.truncate import truncate_text
+
 WORKSPACE = os.environ.get("WORKSPACE_DIR", "workspace")
 
 
@@ -11,7 +13,7 @@ def read_file(path: str) -> str:
     try:
         full_path = os.path.join(WORKSPACE, os.path.basename(path))
         with open(full_path, "r") as f:
-            return f.read()
+            return truncate_text(f.read())
     except FileNotFoundError:
         return "Error: File not found"
     except Exception as e:

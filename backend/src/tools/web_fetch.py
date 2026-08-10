@@ -3,6 +3,8 @@ import re
 import httpx
 from langchain_core.tools import tool
 
+from src.tools.truncate import truncate_text
+
 
 @tool
 async def web_fetch(url: str) -> str:
@@ -16,4 +18,4 @@ async def web_fetch(url: str) -> str:
         html = re.sub(r"<style[^>]*>.*?</style>", "", html, flags=re.DOTALL)
         html = re.sub(r"<[^>]+>", " ", html)
         html = re.sub(r"\s+", " ", html)
-        return html.strip()
+        return truncate_text(html.strip())

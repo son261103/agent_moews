@@ -4,6 +4,8 @@ import sys
 
 from langchain_core.tools import tool
 
+from src.tools.truncate import truncate_text
+
 import math
 import time
 
@@ -90,5 +92,5 @@ def python_repl(code: str) -> str:
             return f"Error: {type(e).__name__}: {e}"
 
     if stderr:
-        return f"{stdout}\nStderr: {stderr}" if stdout else f"Stderr: {stderr}"
-    return stdout if stdout else "Code executed successfully (no output)"
+        return truncate_text(f"{stdout}\nStderr: {stderr}" if stdout else f"Stderr: {stderr}")
+    return truncate_text(stdout) if stdout else "Code executed successfully (no output)"
