@@ -25,7 +25,21 @@ dev = [
     "pytest>=8.0.0,<9",
     "pytest-asyncio>=0.24.0,<1",
     "httpx>=0.28.0,<1",
+    "pyrefly>=0.1.0",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+
+[tool.pyrefly]
+preset = "basic"
+project-includes = ["src", "tests"]
+search-path = ["."]
+python-version = "3.12"
