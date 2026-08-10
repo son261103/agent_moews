@@ -15,7 +15,7 @@ export default function Home() {
         onNewThread={() => setCurrentThreadId(`thread-${Date.now()}`)}
       />
       <main className="flex-1">
-        <ChatWindow threadId={currentThreadId} />
+        <ChatWindow key={currentThreadId} threadId={currentThreadId} />
       </main>
     </div>
   );

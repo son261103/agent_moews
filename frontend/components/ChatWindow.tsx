@@ -32,11 +32,6 @@ export default function ChatWindow({ threadId }: { threadId: string }) {
   }, [messages, streamContent]);
 
   useEffect(() => {
-    stopRef.current?.();
-    stopRef.current = null;
-  }, [threadId]);
-
-  useEffect(() => {
     return () => {
       stopRef.current?.();
       stopRef.current = null;
@@ -88,12 +83,13 @@ export default function ChatWindow({ threadId }: { threadId: string }) {
             );
             break;
           case "done":
-            if (buffer) {
+            const finalContent = buffer;
+            if (finalContent) {
               setMessages((prev) => [
                 ...prev,
                 {
                   id: (Date.now() + 1).toString(),
-                  content: buffer,
+                  content: finalContent,
                   isUser: false,
                 },
               ]);
