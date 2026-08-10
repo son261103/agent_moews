@@ -4,6 +4,18 @@ import sys
 
 from langchain_core.tools import tool
 
+import math
+import time
+
+# Modules safe to import in sandbox
+_SAFE_MODULES = {"sys", "time", "math", "json", "re", "io", "collections", "itertools", "functools", "operator", "string", "textwrap", "typing"}
+
+def _safe_import(name, *args, **kwargs):
+    if name not in _SAFE_MODULES:
+        raise ImportError(f"Module '{name}' is not allowed in sandbox")
+    return __import__(name, *args, **kwargs)
+
+
 # Safe builtins: only allow basic operations, no os/sys/subprocess/file access
 _SAFE_BUILTINS = {
     "print": print,
@@ -32,6 +44,7 @@ _SAFE_BUILTINS = {
     "type": type,
     "repr": repr,
     "input": input,  # harmless in exec context
+    "__import__": _safe_import,
     "Exception": Exception,
     "ValueError": ValueError,
     "TypeError": TypeError,
