@@ -8,12 +8,18 @@ class QualityAssessment(BaseModel):
 
 
 def reflection_node(state: dict) -> dict:
-    """Evaluate output quality. Returns needs_rewrite + feedback."""
+    """Evaluate output quality. Returns needs_rewrite + feedback + next round."""
     round_num = state.get("reflection_round", 0)
 
     if round_num >= 3:
-        return {"needs_rewrite": False, "feedback": "Max reflection rounds reached"}
+        return {
+            "needs_rewrite": False,
+            "feedback": "Max reflection rounds reached",
+            "reflection_round": round_num,
+        }
 
+    # Placeholder: in production this would use an LLM to evaluate quality.
+    # For now it always requests one rewrite so the loop has a chance to improve.
     assessment = QualityAssessment(
         score=3,
         feedback="Output may be incomplete or unclear",
@@ -22,4 +28,5 @@ def reflection_node(state: dict) -> dict:
     return {
         "needs_rewrite": assessment.needs_rewrite,
         "feedback": assessment.feedback,
+        "reflection_round": round_num + 1,
     }
