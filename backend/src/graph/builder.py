@@ -25,8 +25,12 @@ async def build_graph(settings: Settings):
         store=await get_memory_store(settings),
     )
 
-    def deep_agent_node(state: AgentState) -> AgentState:
-        result = deep_agent.invoke(state)
+    def deep_agent_node(state: AgentState, config: dict) -> AgentState:
+        thread_id = config["configurable"]["thread_id"]
+        result = deep_agent.invoke(
+            state,
+            config={"configurable": {"thread_id": thread_id}},
+        )
         result["reflection_round"] = state.get("reflection_round", 0)
         return result
 
