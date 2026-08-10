@@ -18,7 +18,7 @@ def create_app(settings: Settings) -> FastAPI:
         allow_headers=["*"],
     )
 
-    app.include_router(chat.router)
-    app.include_router(threads.router)
+    app.include_router(chat.router, prefix="/api/v1")
+    app.include_router(threads.router, prefix="/api/v1")
 
     return app

@@ -19,9 +19,14 @@ async def chat_stream(request: ChatRequest, http_request: Request):
     input_state = {"messages": [("user", request.message)], "reflection_round": 0}
 
     async def event_generator():
+        root_run_id = None
         try:
             async for event in graph.astream_events(input_state, config=config, version="v2"):
                 kind = event.get("event", "")
+                name = event.get("name", "")
+
+                if kind == "on_chain_start" and name == "LangGraph":
+                    root_run_id = event.get("run_id")
 
                 if kind == "on_chat_model_stream":
                     chunk = event.get("data", {}).get("chunk", "")
@@ -47,7 +52,12 @@ async def chat_stream(request: ChatRequest, http_request: Request):
                         "output": str(output),
                     })
 
-                elif kind == "on_chain_end":
+                elif (
+                    kind == "on_chain_end"
+                    and name == "LangGraph"
+                    and root_run_id
+                    and event.get("run_id") == root_run_id
+                ):
                     yield json.dumps({"type": "done"})
 
         except Exception as e:

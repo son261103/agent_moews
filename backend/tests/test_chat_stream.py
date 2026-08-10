@@ -18,5 +18,5 @@ def client(tmp_path):
 
 
 def test_chat_stream_endpoint_exists(client):
-    response = client.post("/chat/stream", json={"thread_id": "t1", "message": "hi"})
+    response = client.post("/api/v1/chat/stream", json={"thread_id": "t1", "message": "hi"})
     assert response.status_code != 404
