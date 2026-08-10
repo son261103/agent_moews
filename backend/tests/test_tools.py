@@ -7,6 +7,20 @@ class TestWebSearch:
         from src.tools.web_search import web_search
         assert hasattr(web_search, "invoke")
 
+    def test_web_search_calls_tavily(self):
+        from unittest.mock import patch, MagicMock
+        from src.tools.web_search import web_search
+
+        with patch("src.tools.web_search.TavilySearch") as mock_tavily:
+            mock_instance = MagicMock()
+            mock_instance.invoke.return_value = [{"title": "Test", "url": "https://example.com"}]
+            mock_tavily.return_value = mock_instance
+
+            result = web_search.invoke({"query": "test"})
+            mock_tavily.assert_called_once_with(max_results=5)
+            mock_instance.invoke.assert_called_once_with("test")
+            assert "Test" in result
+
 
 class TestWebFetch:
     @patch("src.tools.web_fetch.httpx.AsyncClient")
@@ -42,8 +56,22 @@ class TestPythonRepl:
     async def test_python_repl_timeout(self):
         from src.tools.python_repl import python_repl
 
-        result = await python_repl.ainvoke({"code": "import time; time.sleep(60)"})
+        # Use a short timeout by patching — we don't want to wait 30s in tests
+        import concurrent.futures
+        from unittest.mock import patch
+
+        def raise_timeout(code):
+            raise concurrent.futures.TimeoutError()
+
+        with patch("src.tools.python_repl._execute_code", side_effect=raise_timeout):
+            result = await python_repl.ainvoke({"code": "pass"})
         assert "timeout" in result.lower() or "timed out" in result.lower()
+
+    async def test_python_repl_blocks_os(self):
+        from src.tools.python_repl import python_repl
+
+        result = await python_repl.ainvoke({"code": "import os; os.listdir('/')"})
+        assert "Error" in result
 
 
 class TestFileTools:

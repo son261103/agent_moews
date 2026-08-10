@@ -1,39 +1,81 @@
+import concurrent.futures
 import io
 import sys
-import threading
 
 from langchain_core.tools import tool
+
+# Safe builtins: only allow basic operations, no os/sys/subprocess/file access
+_SAFE_BUILTINS = {
+    "print": print,
+    "len": len,
+    "range": range,
+    "int": int,
+    "float": float,
+    "str": str,
+    "bool": bool,
+    "list": list,
+    "dict": dict,
+    "tuple": tuple,
+    "set": set,
+    "abs": abs,
+    "min": min,
+    "max": max,
+    "sum": sum,
+    "round": round,
+    "sorted": sorted,
+    "reversed": reversed,
+    "enumerate": enumerate,
+    "zip": zip,
+    "map": map,
+    "filter": filter,
+    "isinstance": isinstance,
+    "type": type,
+    "repr": repr,
+    "input": input,  # harmless in exec context
+    "Exception": Exception,
+    "ValueError": ValueError,
+    "TypeError": TypeError,
+    "IndexError": IndexError,
+    "KeyError": KeyError,
+    "AttributeError": AttributeError,
+    "ZeroDivisionError": ZeroDivisionError,
+    "StopIteration": StopIteration,
+    "True": True,
+    "False": False,
+    "None": None,
+}
+
+
+def _execute_code(code: str) -> tuple[str, str]:
+    """Execute code and return (stdout, stderr). Runs in a worker thread."""
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    old_stdout = sys.stdout
+    old_stderr = sys.stderr
+
+    try:
+        sys.stdout = stdout
+        sys.stderr = stderr
+        exec(code, {"__builtins__": _SAFE_BUILTINS})
+    finally:
+        sys.stdout = old_stdout
+        sys.stderr = old_stderr
+
+    return stdout.getvalue(), stderr.getvalue()
 
 
 @tool
 def python_repl(code: str) -> str:
     """Execute Python code in a sandboxed environment with 30s timeout."""
-    timed_out = False
-
-    def timeout_handler():
-        nonlocal timed_out
-        timed_out = True
-
-    timer = threading.Timer(30.0, timeout_handler)
-    timer.start()
-    try:
-        stdout = io.StringIO()
-        stderr = io.StringIO()
-        sys.stdout = stdout
-        sys.stderr = stderr
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(_execute_code, code)
         try:
-            exec(code, {"__builtins__": __builtins__})
-        finally:
-            sys.stdout = sys.__stdout__
-            sys.stderr = sys.__stderr__
-
-        if timed_out:
+            stdout, stderr = future.result(timeout=30)
+        except concurrent.futures.TimeoutError:
             return "Error: Code execution timed out after 30 seconds"
+        except Exception as e:
+            return f"Error: {type(e).__name__}: {e}"
 
-        output = stdout.getvalue()
-        error = stderr.getvalue()
-        if error:
-            return f"{output}\nStderr: {error}" if output else error
-        return output if output else "Code executed successfully (no output)"
-    except Exception as e:
-        return f"Error: {type(e).__name__}: {e}"
+    if stderr:
+        return f"{stdout}\nStderr: {stderr}" if stdout else f"Stderr: {stderr}"
+    return stdout if stdout else "Code executed successfully (no output)"

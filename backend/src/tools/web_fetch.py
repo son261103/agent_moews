@@ -6,7 +6,7 @@ from langchain_core.tools import tool
 
 @tool
 async def web_fetch(url: str) -> str:
-    """Fetch a web page and return markdown content."""
+    """Fetch a web page and return its text content with HTML stripped."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.get(url)
         response.raise_for_status()
