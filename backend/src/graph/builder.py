@@ -1,4 +1,5 @@
 from deepagents import create_deep_agent
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 
 from src.agents.reflection import reflection_node
@@ -12,7 +13,6 @@ from src.tools import python_repl, read_file, web_fetch, web_search, write_file
 
 
 async def build_graph(settings: Settings):
-    """Build and compile the full agent graph."""
     builder = StateGraph(AgentState)
 
     llm = create_llm(settings)
@@ -26,7 +26,7 @@ async def build_graph(settings: Settings):
         store=await get_memory_store(settings),
     )
 
-    def deep_agent_node(state: AgentState, config: dict) -> AgentState:
+    def deep_agent_node(state: AgentState, config: RunnableConfig) -> AgentState:
         thread_id = config["configurable"]["thread_id"]
         result = deep_agent.invoke(
             state,

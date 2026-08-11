@@ -1,3 +1,4 @@
+from langchain_core.runnables import RunnableConfig
 from langchain_core.messages import trim_messages
 from langgraph.graph.message import REMOVE_ALL_MESSAGES, RemoveMessage
 
@@ -6,7 +7,7 @@ from src.graph.state import AgentState
 DEFAULT_MAX_CONTEXT_TOKENS = 8000
 
 
-def trim_node(state: AgentState, config: dict) -> dict:
+def trim_node(state: AgentState, config: RunnableConfig) -> dict:
     """Trim conversation history to a token budget to avoid context overflow."""
     messages = state["messages"]
     configurable = config.get("configurable", {})
