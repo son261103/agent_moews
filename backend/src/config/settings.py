@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     langsmith_endpoint: str = "https://api.smith.langchain.com"
 
     # Models
-    default_model: str = "gpt-4o"
+    default_model: str = "ram/deepseek-v4-flash"
     fast_model: str = "gpt-4o-mini"
     llm_base_url: Optional[str] = None
 

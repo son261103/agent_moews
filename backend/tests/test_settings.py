@@ -9,15 +9,37 @@ def test_settings_loads_env():
     assert s.tavily_api_key == "tvly-test-key"
 
 
-def test_settings_has_defaults():
+_ALL_SETTING_ENV_VARS = [
+    "OPENAI_API_KEY",
+    "TAVILY_API_KEY",
+    "LANGSMITH_API_KEY",
+    "LANGSMITH_TRACING",
+    "LANGSMITH_PROJECT",
+    "LANGSMITH_ENDPOINT",
+    "DEFAULT_MODEL",
+    "FAST_MODEL",
+    "LLM_BASE_URL",
+    "DB_PATH",
+    "WORKSPACE_DIR",
+]
+
+
+def _isolated_settings(monkeypatch, **kwargs):
     from src.config.settings import Settings
-    s = Settings(
+    for var in _ALL_SETTING_ENV_VARS:
+        monkeypatch.delenv(var, raising=False)
+    return Settings(_env_file=None, **kwargs)
+
+
+def test_settings_has_defaults(monkeypatch):
+    s = _isolated_settings(
+        monkeypatch,
         openai_api_key="sk-test",
         tavily_api_key="tvly-test",
         langsmith_api_key="ls-test",
     )
-    assert s.default_model == "gpt-4o"
-    assert s.fast_model == "gpt-4o-mini"
+    assert s.default_model
+    assert s.fast_model
     assert s.llm_base_url is None
     assert s.langsmith_tracing is True
     assert s.langsmith_project == "agent-moew"

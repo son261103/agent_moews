@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.routes import chat, threads
-from src.config.settings import Settings
+from src.config.settings import Settings, settings
 from src.observability.langsmith import setup_langsmith
 
 
@@ -25,3 +25,6 @@ def create_app(settings: Settings) -> FastAPI:
     app.include_router(threads.router, prefix="/api/v1")
 
     return app
+
+
+app = create_app(settings)

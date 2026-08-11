@@ -11,3 +11,11 @@ def test_create_app_returns_fastapi(tmp_path):
     app = create_app(test_settings)
     assert app is not None
     assert hasattr(app, "routes")
+
+
+def test_main_module_exposes_app():
+    from fastapi import FastAPI
+
+    from src.api.main import app
+
+    assert isinstance(app, FastAPI)
