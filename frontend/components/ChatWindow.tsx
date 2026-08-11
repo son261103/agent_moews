@@ -121,7 +121,7 @@ export default function ChatWindow({ threadId }: { threadId: string }) {
           <MessageBubble key={msg.id} content={msg.content} isUser={msg.isUser} />
         ))}
         {streamContent && (
-          <MessageBubble content={streamContent} isUser={false} />
+          <MessageBubble content={streamContent} isUser={false} isStreaming={true} />
         )}
         {(isLoading || toolCalls.length > 0) && (
           <AgentSteps plan={plan} toolCalls={toolCalls} isRunning={isLoading} />
@@ -134,8 +134,8 @@ export default function ChatWindow({ threadId }: { threadId: string }) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder="Ask the agent anything..."
-            className="flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder={isLoading ? "Agent đang xử lý..." : "Ask the agent anything..."}
+            className="flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
             disabled={isLoading}
           />
           <button
