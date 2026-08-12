@@ -167,3 +167,36 @@ class TestCurrentTime:
         assert result.count(",") == 2
         assert "202" in result  # year present
         assert ":" in result    # time present
+
+
+class TestNews:
+    RSS_XML = (
+        '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>'
+        "<item><title>Tin so mot</title><link>https://vnexpress.net/a1</link>"
+        "<description>Mo ta mot</description></item>"
+        "<item><title>Tin so hai</title><link>https://vnexpress.net/a2</link>"
+        "<description>Mo ta hai</description></item>"
+        "</channel></rss>"
+    )
+
+    @patch("src.tools.news_tools.httpx.AsyncClient")
+    async def test_get_news_returns_items(self, mock_client_class):
+        from src.tools.news_tools import get_news
+
+        mock_client = AsyncMock()
+        mock_client_class.return_value.__aenter__.return_value = mock_client
+        mock_response = MagicMock()
+        mock_response.text = self.RSS_XML
+        mock_response.raise_for_status = MagicMock()
+        mock_client.get.return_value = mock_response
+
+        result = await get_news.ainvoke({})
+        assert "Tin so mot" in result
+        assert "https://vnexpress.net/a1" in result
+
+    @patch("src.tools.news_tools.httpx.AsyncClient")
+    async def test_get_news_unknown_category(self, mock_client_class):
+        from src.tools.news_tools import get_news
+
+        result = await get_news.ainvoke({"category": "khong-co"})
+        assert "Không hỗ trợ" in result
