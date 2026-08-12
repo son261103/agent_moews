@@ -27,9 +27,9 @@ async def build_graph(settings: Settings):
         store=await get_memory_store(settings),
     )
 
-    def deep_agent_node(state: AgentState, config: RunnableConfig) -> AgentState:
+    async def deep_agent_node(state: AgentState, config: RunnableConfig) -> AgentState:
         thread_id = config["configurable"]["thread_id"]
-        result = deep_agent.invoke(
+        result = await deep_agent.ainvoke(
             state,
             config={"configurable": {"thread_id": thread_id}},
         )

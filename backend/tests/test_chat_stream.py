@@ -147,3 +147,75 @@ def test_chat_stream_persists_messages(tmp_path):
         assert [m["role"] for m in detail["messages"]] == ["user", "assistant"]
         assert detail["messages"][0]["content"] == "hello"
         assert detail["messages"][1]["content"] == streamed
+
+
+def test_chat_stream_async_tool_succeeds(tmp_path):
+    """Async tools (get_weather) must run inside the graph (regression:
+    deep_agent_node was sync, so async tools raised
+    'StructuredTool does not support sync invocation')."""
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from src.api.main import create_app
+    from src.config.settings import Settings
+    import src.graph.builder as builder_mod
+
+    class WeatherToolLLM(FakeToolLLM):
+        def _response(self, n: int) -> AIMessage:
+            if n == 0:
+                return AIMessage(
+                    content="",
+                    tool_calls=[
+                        {"name": "get_weather", "args": {"city": "Hà Nội"}, "id": "call_1"}
+                    ],
+                )
+            return AIMessage(content="Final answer text.")
+
+    builder_mod.create_llm = lambda settings: WeatherToolLLM()
+
+    test_settings = Settings(
+        openai_api_key="sk-test",
+        tavily_api_key="tvly-test",
+        langsmith_api_key="ls-test",
+        db_path=str(tmp_path / "test.db"),
+    )
+    app = create_app(test_settings)
+
+    with patch("src.tools.weather_tools.httpx.AsyncClient") as mock_client_class:
+        mock_client = AsyncMock()
+        mock_client_class.return_value.__aenter__.return_value = mock_client
+
+        geo_response = MagicMock()
+        geo_response.json.return_value = {
+            "results": [{"latitude": 21.0285, "longitude": 105.8542, "name": "Hà Nội"}]
+        }
+        weather_response = MagicMock()
+        weather_response.json.return_value = {
+            "current": {
+                "temperature_2m": 30.5,
+                "apparent_temperature": 32.1,
+                "relative_humidity_2m": 70,
+                "weather_code": 1,
+                "wind_speed_10m": 12,
+            }
+        }
+        # The reflection loop can run up to 3 rounds, each invoking the agent
+        # and the researcher sub-agent (2 tool calls -> 4 GETs per round).
+        mock_client.get.side_effect = [geo_response, weather_response] * 20
+
+        events = []
+        with TestClient(app) as client:
+            with client.stream(
+                "POST", "/api/v1/chat/stream",
+                json={"thread_id": "t-async", "message": "thời tiết Hà Nội"},
+            ) as resp:
+                for line in resp.iter_lines():
+                    if line.startswith("data:") and line.strip() != "data:":
+                        events.append(json.loads(line[5:].strip()))
+
+    errors = [e for e in events if e["type"] == "error"]
+    tool_ends = [e for e in events if e["type"] == "tool_end"]
+    dones = [e for e in events if e["type"] == "done"]
+
+    assert not errors, f"stream errored: {[e.get('message') for e in errors]}"
+    assert any(e["tool"] == "get_weather" for e in tool_ends)
+    assert len(dones) == 1
