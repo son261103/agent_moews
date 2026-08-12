@@ -105,8 +105,13 @@ body {
   margin-left: 1px;
 }
 
-/* Focus ring */
+/* Focus ring for keyboard navigation */
 *:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+/* Textarea manages its own focus via the container's focus-within ring */
+textarea:focus-visible {
+  outline: none;
 }
