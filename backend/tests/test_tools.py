@@ -157,3 +157,13 @@ class TestFileTools:
         result = await read_file.ainvoke({"path": str(f)})
         assert "truncated" in result
         assert len(result) < 5000
+
+
+class TestCurrentTime:
+    def test_get_current_time_format(self):
+        from src.tools.time_tools import get_current_time
+
+        result = get_current_time.invoke({})
+        assert result.count(",") == 2
+        assert "202" in result  # year present
+        assert ":" in result    # time present
