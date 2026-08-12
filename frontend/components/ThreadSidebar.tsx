@@ -12,12 +12,14 @@ export default function ThreadSidebar({
   currentThreadId,
   onSelectThread,
   onNewThread,
+  refreshKey,
 }: {
   currentThreadId: string;
   onSelectThread: (id: string) => void;
   onNewThread: () => void;
+  refreshKey: number;
 }) {
-  const { data: threads } = useSWR("threads", listThreads);
+  const { data: threads } = useSWR(["threads", refreshKey], listThreads);
 
   return (
     <div className="w-72 bg-panel flex flex-col border-r border-panel-border">

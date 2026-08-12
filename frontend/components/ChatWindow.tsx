@@ -5,6 +5,7 @@ import MessageBubble from "./MessageBubble";
 import ThinkingBlock from "./ThinkingBlock";
 import ToolCard from "./ToolCard";
 import { streamChat, StreamEvent } from "@/lib/sse";
+import { getThread } from "@/lib/api";
 
 interface Message {
   id: string;
@@ -31,7 +32,13 @@ const EXAMPLE_PROMPTS = [
   "Tìm kiếm giúp tôi thông tin về LangChain",
 ];
 
-export default function ChatWindow({ threadId }: { threadId: string }) {
+export default function ChatWindow({
+  threadId,
+  onThreadUpdated,
+}: {
+  threadId: string;
+  onThreadUpdated?: () => void;
+}) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -53,6 +60,28 @@ export default function ChatWindow({ threadId }: { threadId: string }) {
     return () => {
       stopRef.current?.();
       stopRef.current = null;
+    };
+  }, [threadId]);
+
+  // Load thread history on mount
+  useEffect(() => {
+    let cancelled = false;
+    setMessages([]);
+    setToolCalls([]);
+    setStreamContent("");
+    setThinking({ isRunning: false, content: "" });
+    getThread(threadId).then((thread) => {
+      if (cancelled || !thread) return;
+      setMessages(
+        thread.messages.map((m, i) => ({
+          id: `${m.timestamp}-${i}`,
+          content: m.content,
+          isUser: m.role === "user",
+        }))
+      );
+    });
+    return () => {
+      cancelled = true;
     };
   }, [threadId]);
 
@@ -154,6 +183,7 @@ export default function ChatWindow({ threadId }: { threadId: string }) {
             setStreamContent("");
             setIsLoading(false);
             setThinking((prev) => ({ ...prev, isRunning: false }));
+            onThreadUpdated?.();
             break;
           }
 
@@ -168,11 +198,24 @@ export default function ChatWindow({ threadId }: { threadId: string }) {
             ]);
             setIsLoading(false);
             setThinking((prev) => ({ ...prev, isRunning: false }));
+            onThreadUpdated?.();
             break;
         }
+      },
+      (err) => {
+        setIsLoading(false);
+        setThinking({ isRunning: false, content: "" });
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `msg-${Date.now()}`,
+            content: `Lỗi: ${err.message || "Không kết nối được máy chủ"}`,
+            isUser: false,
+          },
+        ]);
       }
     );
-  }, [input, isLoading, threadId]);
+  }, [input, isLoading, threadId, onThreadUpdated]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
