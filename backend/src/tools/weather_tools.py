@@ -8,7 +8,7 @@ WEATHER_CODES = {
     61: "Mưa nhỏ", 63: "Mưa vừa", 65: "Mưa to",
     71: "Tuyết rơi nhẹ", 73: "Tuyết rơi vừa", 75: "Tuyết rơi dày", 77: "Mưa tuyết",
     80: "Mưa rào nhẹ", 81: "Mưa rào", 82: "Mưa rào mạnh",
-    62: "Mưa tuyết rào nhẹ", 86: "Mưa tuyết rào",
+    85: "Mưa tuyết rào nhẹ", 86: "Mưa tuyết rào",
     95: "Dông", 96: "Dông kèm mưa đá", 99: "Dông mạnh kèm mưa đá",
 }
 
