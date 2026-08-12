@@ -25,10 +25,10 @@ interface ThinkingState {
 }
 
 const EXAMPLE_PROMPTS = [
-  "Tìm thông tin về React 19 và tóm tắt các tính năng mới",
-  "Viết hàm Python để tính số Fibonacci",
-  "Phân tích ưu nhược điểm của Next.js vs Remix",
-  "Giải thích cách hoạt động của LangChain",
+  "Thời tiết hôm nay ở Hà Nội thế nào?",
+  "Cho tôi xem tin tức mới nhất",
+  "Bây giờ là mấy giờ rồi?",
+  "Tìm kiếm giúp tôi thông tin về LangChain",
 ];
 
 export default function ChatWindow({ threadId }: { threadId: string }) {

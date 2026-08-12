@@ -12,18 +12,18 @@ interface ToolCardProps {
 const TOOL_ICONS: Record<string, string> = {
   web_search: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z",
   web_fetch: "M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1",
-  python_repl: "M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4",
-  read_file: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253",
-  write_file: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z",
+  get_current_time: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
+  get_news: "M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z",
+  get_weather: "M12 3v2m0 14v2M5.6 5.6l1.4 1.4m10.4 10.4l1.4 1.4M3 12h2m14 0h2M5.6 18.4l1.4-1.4m10.4-10.4l1.4-1.4M12 7a5 5 0 115 5 4 4 0 00-4-4z",
   execute: "M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
 };
 
 const TOOL_LABELS: Record<string, string> = {
   web_search: "Tìm kiếm web",
   web_fetch: "Lấy nội dung web",
-  python_repl: "Thực thi Python",
-  read_file: "Đọc tệp",
-  write_file: "Ghi tệp",
+  get_current_time: "Xem giờ",
+  get_news: "Tin tức",
+  get_weather: "Thời tiết",
   execute: "Thực thi lệnh",
 };
 
