@@ -3,29 +3,29 @@ name = "agent-moew-backend"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-    "langchain>=0.3.27",
-    "langchain-core>=1.5.0,<2",
-    "langchain-openai>=1.4.0,<2",
-    "langgraph>=1.2.0,<2",
-    "langgraph-checkpoint-sqlite>=2.0.0,<3",
-    "deepagents>=0.7.0,<1",
-    "langchain-tavily>=0.2.18,<1",
-    "fastapi>=0.115.0,<1",
-    "uvicorn[standard]>=0.30.0,<1",
-    "sse-starlette>=3.4.0,<4",
-    "pydantic>=2.0,<3",
-    "pydantic-settings>=2.15.0,<3",
-    "httpx>=0.28.0,<1",
-    "tenacity>=9.0.0,<10",
-    "python-dotenv>=1.0.0,<2",
+    "langchain",
+    "langchain-core",
+    "langchain-openai",
+    "langgraph",
+    "langgraph-checkpoint-sqlite",
+    "deepagents",
+    "langchain-tavily",
+    "fastapi",
+    "uvicorn[standard]",
+    "sse-starlette",
+    "pydantic",
+    "pydantic-settings",
+    "httpx",
+    "tenacity",
+    "python-dotenv",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0.0,<9",
-    "pytest-asyncio>=0.24.0,<1",
-    "httpx>=0.28.0,<1",
-    "pyrefly>=0.1.0",
+    "pytest",
+    "pytest-asyncio",
+    "httpx",
+    "pyrefly",
 ]
 
 [build-system]

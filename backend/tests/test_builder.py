@@ -15,3 +15,4 @@ async def test_build_graph_returns_runnable(tmp_path):
     graph = await build_graph(test_settings)
     assert graph is not None
     assert hasattr(graph, "astream_events")
+    await graph.checkpointer.conn.close()

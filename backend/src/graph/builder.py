@@ -17,12 +17,13 @@ async def build_graph(settings: Settings):
 
     llm = create_llm(settings)
     all_tools = [web_search, web_fetch, python_repl, read_file, write_file]
+    checkpointer = await get_checkpointer(settings)
 
     deep_agent = create_deep_agent(
         model=llm,
         tools=all_tools,
         subagents=sub_agents,
-        checkpointer=await get_checkpointer(settings),
+        checkpointer=checkpointer,
         store=await get_memory_store(settings),
     )
 
@@ -53,4 +54,4 @@ async def build_graph(settings: Settings):
     )
     builder.add_edge("save_memory", END)
 
-    return builder.compile(checkpointer=await get_checkpointer(settings))
+    return builder.compile(checkpointer=checkpointer)

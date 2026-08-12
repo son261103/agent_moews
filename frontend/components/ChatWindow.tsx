@@ -60,6 +60,12 @@ export default function ChatWindow({ threadId }: { threadId: string }) {
       input,
       (event: StreamEvent) => {
         switch (event.type) {
+          case "reset":
+            buffer = "";
+            setStreamContent("");
+            setToolCalls([]);
+            setPlan([]);
+            break;
           case "token":
             buffer += event.content || "";
             setStreamContent(buffer);
