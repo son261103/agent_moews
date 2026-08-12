@@ -1,25 +1,112 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-surface: #FAF9F6;
+  --color-surface-alt: #F5F3EF;
+  --color-panel: #1C1C1A;
+  --color-panel-hover: #2A2A28;
+  --color-panel-active: #363634;
+  --color-panel-border: #333331;
+  --color-text-primary: #1A1A19;
+  --color-text-secondary: #6B6B68;
+  --color-text-tertiary: #9C9C98;
+  --color-text-on-dark: #F5F3EF;
+  --color-text-on-dark-muted: #A8A8A4;
+  --color-border: #E8E6E1;
+  --color-border-strong: #D4D2CD;
+  --color-accent: #2563EB;
+  --color-accent-hover: #1D4FD8;
+  --color-accent-light: #EFF6FF;
+  --color-user-bubble: #2563EB;
+  --color-user-text: #FFFFFF;
+  --color-success: #16A34A;
+  --color-success-bg: #F0FDF4;
+  --color-error: #DC2626;
+  --color-error-bg: #FEF2F2;
+  --color-thinking-bg: #F8F7F4;
+  --color-thinking-border: #E5E3DE;
+  --color-code-bg: #282C34;
+  --color-code-text: #ABB2BF;
+  --color-inline-code-bg: #F0EDE8;
+  --color-inline-code-text: #C7254E;
+  --color-scrollbar-track: transparent;
+  --color-scrollbar-thumb: #D4D2CD;
+  --color-scrollbar-thumb-hover: #B8B6B1;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-html,
-body {
+html, body {
   height: 100%;
   margin: 0;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar-thumb);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scrollbar-thumb-hover);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track);
+}
+
+/* Thinking shimmer animation */
+@keyframes thinking-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.thinking-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-text-tertiary) 25%,
+    var(--color-text-secondary) 50%,
+    var(--color-text-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: thinking-shimmer 2s ease-in-out infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Streaming cursor */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.streaming-cursor::after {
+  content: "▊";
+  display: inline;
+  animation: blink 1s step-end infinite;
+  color: var(--color-text-secondary);
+  margin-left: 1px;
+}
+
+/* Focus ring */
+*:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }

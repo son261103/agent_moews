@@ -29,6 +29,19 @@ async def chat_stream(request: ChatRequest, http_request: Request):
                 if kind == "on_chain_start" and name == "deep_agent":
                     yield json.dumps({"type": "reset"})
 
+                if kind == "on_chain_start" and name == "reflect":
+                    yield json.dumps({"type": "reflection", "status": "start"})
+
+                if kind == "on_chain_end" and name == "reflect":
+                    output = event.get("data", {}).get("output", {})
+                    if isinstance(output, dict):
+                        feedback = output.get("feedback", "")
+                    else:
+                        feedback = str(output)
+                    if len(str(feedback)) > 200:
+                        feedback = str(feedback)[:200] + "..."
+                    yield json.dumps({"type": "reflection", "status": "end", "content": str(feedback)})
+
                 if kind == "on_chat_model_stream":
                     chunk = event.get("data", {}).get("chunk", "")
                     if hasattr(chunk, "content"):

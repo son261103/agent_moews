@@ -4,6 +4,7 @@ export interface StreamEvent {
   tool?: string;
   output?: string;
   message?: string;
+  status?: "start" | "end";
 }
 
 export function streamChat(
