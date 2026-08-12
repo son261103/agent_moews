@@ -9,14 +9,14 @@ from src.graph.checkpointer import get_checkpointer, get_memory_store
 from src.graph.state import AgentState
 from src.graph.trim import trim_node
 from src.llm.factory import create_llm
-from src.tools import python_repl, read_file, web_fetch, web_search, write_file
+from src.tools import get_current_time, get_news, get_weather, web_fetch, web_search
 
 
 async def build_graph(settings: Settings):
     builder = StateGraph(AgentState)
 
     llm = create_llm(settings)
-    all_tools = [web_search, web_fetch, python_repl, read_file, write_file]
+    all_tools = [web_search, web_fetch, get_current_time, get_news, get_weather]
     checkpointer = await get_checkpointer(settings)
 
     deep_agent = create_deep_agent(

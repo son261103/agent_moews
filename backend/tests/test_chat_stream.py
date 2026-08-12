@@ -8,7 +8,7 @@ from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResu
 
 
 class FakeToolLLM(BaseChatModel):
-    """Turn 0 -> tool call to python_repl, turn 1+ -> final answer."""
+    """Turn 0 -> tool call to get_current_time, turn 1+ -> final answer."""
 
     _n: int = 0
 
@@ -24,7 +24,7 @@ class FakeToolLLM(BaseChatModel):
             return AIMessage(
                 content="",
                 tool_calls=[
-                    {"name": "python_repl", "args": {"code": "print('hi')"}, "id": "call_1"}
+                    {"name": "get_current_time", "args": {}, "id": "call_1"}
                 ],
             )
         return AIMessage(content="Final answer text.")
@@ -107,6 +107,6 @@ def test_chat_stream_emits_tool_names_and_single_done(tmp_path):
 
     assert tool_starts, "expected at least one tool_start event"
     assert all(e["tool"] for e in tool_starts), "tool name must not be empty"
-    assert any(e["tool"] == "python_repl" for e in tool_starts)
+    assert any(e["tool"] == "get_current_time" for e in tool_starts)
     assert len(dones) == 1, f"expected exactly one done, got {len(dones)}"
     assert any("Final answer text." in e["content"] for e in tokens)
