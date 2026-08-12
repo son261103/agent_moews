@@ -18,13 +18,21 @@ export interface ThreadDetail {
 }
 
 export async function listThreads(): Promise<ThreadInfo[]> {
-  const res = await fetch(`${API_URL}/threads`);
-  if (!res.ok) return [];
-  return res.json();
+  try {
+    const res = await fetch(`${API_URL}/threads`);
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
 }
 
 export async function getThread(threadId: string): Promise<ThreadDetail | null> {
-  const res = await fetch(`${API_URL}/threads/${threadId}`);
-  if (!res.ok) return null;
-  return res.json();
+  try {
+    const res = await fetch(`${API_URL}/threads/${threadId}`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
 }
