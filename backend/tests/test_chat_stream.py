@@ -110,3 +110,40 @@ def test_chat_stream_emits_tool_names_and_single_done(tmp_path):
     assert any(e["tool"] == "get_current_time" for e in tool_starts)
     assert len(dones) == 1, f"expected exactly one done, got {len(dones)}"
     assert any("Final answer text." in e["content"] for e in tokens)
+
+
+def test_chat_stream_persists_messages(tmp_path):
+    from src.api.main import create_app
+    from src.config.settings import Settings
+    import src.graph.builder as builder_mod
+
+    builder_mod.create_llm = lambda settings: FakeToolLLM()
+
+    test_settings = Settings(
+        openai_api_key="sk-test",
+        tavily_api_key="tvly-test",
+        langsmith_api_key="ls-test",
+        db_path=str(tmp_path / "test.db"),
+    )
+    app = create_app(test_settings)
+
+    with TestClient(app) as client:
+        events = []
+        with client.stream(
+            "POST", "/api/v1/chat/stream",
+            json={"thread_id": "t-persist", "message": "hello"},
+        ) as resp:
+            for line in resp.iter_lines():
+                if line.startswith("data:") and line.strip() != "data:":
+                    events.append(json.loads(line[5:].strip()))
+
+        # The graph streams model output from deep_agent, the sub-agent and
+        # reflect (FakeToolLLM returns the same text for each call), so the
+        # reply is the concatenation of every streamed token.
+        streamed = "".join(e.get("content", "") for e in events if e["type"] == "token")
+        assert streamed, "expected streamed tokens"
+
+        detail = client.get("/api/v1/threads/t-persist").json()
+        assert [m["role"] for m in detail["messages"]] == ["user", "assistant"]
+        assert detail["messages"][0]["content"] == "hello"
+        assert detail["messages"][1]["content"] == streamed

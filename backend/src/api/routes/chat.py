@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Request
 from sse_starlette.sse import EventSourceResponse
@@ -16,8 +17,17 @@ async def chat_stream(request: ChatRequest, http_request: Request):
     config = {"configurable": {"thread_id": request.thread_id}}
     input_state = {"messages": [("user", request.message)], "reflection_round": 0}
 
+    store = http_request.app.state.chat_store
+    await store.add_message(
+        request.thread_id,
+        "user",
+        request.message,
+        datetime.now(timezone.utc).isoformat(),
+    )
+
     async def event_generator():
         root_run_id = None
+        assistant_parts: list[str] = []
         try:
             async for event in graph.astream_events(input_state, config=config, version="v2"):
                 kind = event.get("event", "")
@@ -51,6 +61,7 @@ async def chat_stream(request: ChatRequest, http_request: Request):
                     if not chunk_data:
                         continue
                     yield json.dumps({"type": "token", "content": chunk_data})
+                    assistant_parts.append(chunk_data)
 
                 elif kind == "on_tool_start":
                     yield json.dumps({
@@ -76,9 +87,21 @@ async def chat_stream(request: ChatRequest, http_request: Request):
                     and root_run_id
                     and event.get("run_id") == root_run_id
                 ):
+                    await store.add_message(
+                        request.thread_id,
+                        "assistant",
+                        "".join(assistant_parts),
+                        datetime.now(timezone.utc).isoformat(),
+                    )
                     yield json.dumps({"type": "done"})
 
         except Exception as e:
+            await store.add_message(
+                request.thread_id,
+                "assistant",
+                f"Lỗi: {e}",
+                datetime.now(timezone.utc).isoformat(),
+            )
             yield json.dumps({"type": "error", "message": str(e)})
 
     return EventSourceResponse(event_generator())
