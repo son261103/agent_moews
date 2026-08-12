@@ -316,7 +316,7 @@ export default function ChatWindow({
       {/* Input area */}
       <div className="flex-shrink-0 border-t border-border bg-surface">
         <div className="max-w-3xl mx-auto px-4 py-4">
-          <div className="relative flex items-end gap-2 rounded-2xl border border-border bg-white shadow-sm focus-within:border-accent focus-within:ring-1 focus-within:ring-accent/20 transition-all duration-150">
+          <div className="relative flex items-center gap-2 rounded-2xl border border-border bg-white shadow-sm focus-within:border-accent focus-within:ring-1 focus-within:ring-accent/20 transition-all duration-150">
             <textarea
               ref={textareaRef}
               value={input}
@@ -330,7 +330,7 @@ export default function ChatWindow({
             <button
               onClick={handleSend}
               disabled={isLoading || !input.trim()}
-              className="flex-shrink-0 w-9 h-9 rounded-xl bg-accent hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors duration-150 mb-2"
+              className="flex-shrink-0 w-9 h-9 rounded-xl bg-accent hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors duration-150"
             >
               <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
