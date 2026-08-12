@@ -1,4 +1,4 @@
-MAX_TOOL_OUTPUT_CHARS = 2000
+MAX_TOOL_OUTPUT_CHARS = 4000
 
 
 def truncate_text(text: str, max_chars: int = MAX_TOOL_OUTPUT_CHARS) -> str:
@@ -6,3 +6,4 @@ def truncate_text(text: str, max_chars: int = MAX_TOOL_OUTPUT_CHARS) -> str:
     if len(text) <= max_chars:
         return text
     return text[:max_chars] + f"\n... [truncated {len(text) - max_chars} chars]"
+

@@ -1,28 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import MessageBubble from "./MessageBubble";
-import ThinkingBlock from "./ThinkingBlock";
-import ToolCard from "./ToolCard";
+import MessageBubble, { ToolCall, ThinkingState } from "./MessageBubble";
 import { streamChat, StreamEvent } from "@/lib/sse";
 import { getThread } from "@/lib/api";
 
 interface Message {
   id: string;
-  content: string;
   isUser: boolean;
-}
-
-interface ToolCall {
-  id: string;
-  tool: string;
-  status: "running" | "done";
-  output?: string;
-}
-
-interface ThinkingState {
-  isRunning: boolean;
   content: string;
+  toolCalls?: ToolCall[];
+  thinking?: ThinkingState;
+  isStreaming?: boolean;
 }
 
 const EXAMPLE_PROMPTS = [
@@ -42,20 +31,16 @@ export default function ChatWindow({
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
-  const [streamContent, setStreamContent] = useState("");
-  const [thinking, setThinking] = useState<ThinkingState>({ isRunning: false, content: "" });
   const bottomRef = useRef<HTMLDivElement>(null);
   const stopRef = useRef<(() => void) | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const toolIdCounter = useRef(0);
 
-  // Auto-scroll
+  // Auto-scroll on update
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streamContent, toolCalls, thinking]);
+  }, [messages]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount / thread change
   useEffect(() => {
     return () => {
       stopRef.current?.();
@@ -67,9 +52,6 @@ export default function ChatWindow({
   useEffect(() => {
     let cancelled = false;
     setMessages([]);
-    setToolCalls([]);
-    setStreamContent("");
-    setThinking({ isRunning: false, content: "" });
     getThread(threadId).then((thread) => {
       if (cancelled || !thread) return;
       setMessages(
@@ -77,6 +59,7 @@ export default function ChatWindow({
           id: `${m.timestamp}-${i}`,
           content: m.content,
           isUser: m.role === "user",
+          isStreaming: false,
         }))
       );
     });
@@ -98,121 +81,147 @@ export default function ChatWindow({
     if (!input.trim() || isLoading) return;
 
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: `user-${Date.now()}`,
       content: input.trim(),
       isUser: true,
     };
-    setMessages((prev) => [...prev, userMessage]);
+
+    const assistantMessageId = `assistant-${Date.now()}`;
+    const assistantMessage: Message = {
+      id: assistantMessageId,
+      content: "",
+      isUser: false,
+      toolCalls: [],
+      thinking: { isRunning: false, content: "" },
+      isStreaming: true,
+    };
+
+    setMessages((prev) => [...prev, userMessage, assistantMessage]);
     setInput("");
     setIsLoading(true);
-    setToolCalls([]);
-    setStreamContent("");
-    setThinking({ isRunning: false, content: "" });
-    toolIdCounter.current = 0;
 
-    let buffer = "";
     stopRef.current?.();
     stopRef.current = streamChat(
       threadId,
       input.trim(),
       (event: StreamEvent) => {
-        switch (event.type) {
-          case "reset":
-            buffer = "";
-            setStreamContent("");
-            setToolCalls([]);
-            setThinking({ isRunning: false, content: "" });
-            break;
+        setMessages((prev) => {
+          const lastIdx = prev.length - 1;
+          if (lastIdx < 0 || prev[lastIdx].id !== assistantMessageId) return prev;
 
-          case "token":
-            buffer += event.content || "";
-            setStreamContent(buffer);
-            break;
+          const currentMsg = { ...prev[lastIdx] };
+          const toolCalls = [...(currentMsg.toolCalls || [])];
+          const thinking = { ...(currentMsg.thinking || { isRunning: false, content: "" }) };
 
-          case "tool_start":
-            toolIdCounter.current += 1;
-            setToolCalls((prev) => [
-              ...prev,
-              {
-                id: `tool-${toolIdCounter.current}`,
+          switch (event.type) {
+            case "token":
+              currentMsg.content = (currentMsg.content || "") + (event.content || "");
+              break;
+
+            case "tool_start": {
+              const toolId = event.run_id || `tool-${Date.now()}-${Math.random()}`;
+              toolCalls.push({
+                id: toolId,
                 tool: event.tool || "unknown",
                 status: "running",
-              },
-            ]);
-            break;
-
-          case "tool_end":
-            setToolCalls((prev) =>
-              prev.map((tc) =>
-                tc.tool === event.tool && tc.status === "running"
-                  ? { ...tc, status: "done" as const, output: event.output }
-                  : tc
-              )
-            );
-            break;
-
-          case "reflection":
-            if (event.status === "start") {
-              setThinking((prev) => ({ ...prev, isRunning: true }));
-            } else if (event.status === "end") {
-              setThinking({
-                isRunning: false,
-                content: event.content || "",
               });
+              break;
             }
-            break;
 
-          case "plan":
-            // Plan events are informational; we handle them gracefully
-            // They could be shown in thinking block if desired
-            break;
-
-          case "done": {
-            const finalContent = buffer;
-            if (finalContent) {
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: `msg-${Date.now()}`,
-                  content: finalContent,
-                  isUser: false,
-                },
-              ]);
+            case "tool_end": {
+              let updated = false;
+              for (let i = 0; i < toolCalls.length; i++) {
+                const tc = toolCalls[i];
+                const matchById = event.run_id && tc.id === event.run_id;
+                const matchByName = !event.run_id && tc.tool === event.tool && tc.status === "running";
+                if (matchById || matchByName) {
+                  toolCalls[i] = { ...tc, status: "done", output: event.output };
+                  updated = true;
+                  break;
+                }
+              }
+              if (!updated && event.tool) {
+                toolCalls.push({
+                  id: event.run_id || `tool-${Date.now()}`,
+                  tool: event.tool,
+                  status: "done",
+                  output: event.output,
+                });
+              }
+              break;
             }
-            buffer = "";
-            setStreamContent("");
-            setIsLoading(false);
-            setThinking((prev) => ({ ...prev, isRunning: false }));
-            onThreadUpdated?.();
-            break;
+
+            case "reflection":
+              if (event.status === "start") {
+                thinking.isRunning = true;
+              } else if (event.status === "end") {
+                thinking.isRunning = false;
+                thinking.content = event.content || "";
+              }
+              break;
+
+            case "done":
+              currentMsg.isStreaming = false;
+              thinking.isRunning = false;
+              for (let i = 0; i < toolCalls.length; i++) {
+                if (toolCalls[i].status === "running") {
+                  toolCalls[i] = { ...toolCalls[i], status: "done" };
+                }
+              }
+              setTimeout(() => {
+                setIsLoading(false);
+                onThreadUpdated?.();
+              }, 0);
+              break;
+
+            case "error":
+              currentMsg.isStreaming = false;
+              currentMsg.content = `Lỗi: ${event.message || "Đã xảy ra lỗi không xác định"}`;
+              thinking.isRunning = false;
+              for (let i = 0; i < toolCalls.length; i++) {
+                if (toolCalls[i].status === "running") {
+                  toolCalls[i] = { ...toolCalls[i], status: "done" };
+                }
+              }
+              setTimeout(() => {
+                setIsLoading(false);
+                onThreadUpdated?.();
+              }, 0);
+              break;
           }
 
-          case "error":
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: `msg-${Date.now()}`,
-                content: `Lỗi: ${event.message || "Đã xảy ra lỗi không xác định"}`,
-                isUser: false,
-              },
-            ]);
-            setIsLoading(false);
-            setThinking((prev) => ({ ...prev, isRunning: false }));
-            onThreadUpdated?.();
-            break;
-        }
+          currentMsg.toolCalls = toolCalls;
+          currentMsg.thinking = thinking;
+
+          const next = [...prev];
+          next[lastIdx] = currentMsg;
+          return next;
+        });
       },
       (err) => {
-        setIsLoading(false);
-        setThinking({ isRunning: false, content: "" });
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `msg-${Date.now()}`,
-            content: `Lỗi: ${err.message || "Không kết nối được máy chủ"}`,
-            isUser: false,
-          },
-        ]);
+        setMessages((prev) => {
+          const lastIdx = prev.length - 1;
+          if (lastIdx < 0 || prev[lastIdx].id !== assistantMessageId) return prev;
+
+          const currentMsg = { ...prev[lastIdx] };
+          currentMsg.isStreaming = false;
+          currentMsg.content = `Lỗi: ${err.message || "Không kết nối được máy chủ"}`;
+
+          const toolCalls = [...(currentMsg.toolCalls || [])];
+          for (let i = 0; i < toolCalls.length; i++) {
+            if (toolCalls[i].status === "running") {
+              toolCalls[i] = { ...toolCalls[i], status: "done" };
+            }
+          }
+          currentMsg.toolCalls = toolCalls;
+
+          const next = [...prev];
+          next[lastIdx] = currentMsg;
+          return next;
+        });
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 0);
       }
     );
   }, [input, isLoading, threadId, onThreadUpdated]);
@@ -229,42 +238,45 @@ export default function ChatWindow({
     textareaRef.current?.focus();
   };
 
-  const hasMessages = messages.length > 0 || streamContent;
+  const hasMessages = messages.length > 0;
 
   return (
     <div className="flex flex-col h-full bg-surface">
       {/* Header */}
-      <div className="flex-shrink-0 h-14 border-b border-border flex items-center px-6">
+      <div className="flex-shrink-0 h-14 border-b border-border flex items-center justify-between px-6 bg-surface/80 backdrop-blur-sm z-10">
         <div className="flex items-center gap-2.5">
-          <div className="w-2 h-2 rounded-full bg-success" />
+          <div className="w-2.5 h-2.5 rounded-full bg-success" />
           <span className="text-sm font-semibold text-text-primary">Agent Moew</span>
+          <span className="text-xs text-text-tertiary font-mono bg-surface-alt px-2 py-0.5 rounded-md border border-border">
+            LangGraph + DeepAgents
+          </span>
         </div>
         {isLoading && (
-          <div className="ml-4 flex items-center gap-2 text-xs text-text-tertiary">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-            <span>Đang xử lý...</span>
+          <div className="flex items-center gap-2 text-xs text-text-tertiary">
+            <span className="inline-block w-2 h-2 rounded-full bg-accent animate-ping" />
+            <span className="font-medium text-accent">Agent đang suy nghĩ & xử lý...</span>
           </div>
         )}
       </div>
 
-      {/* Messages area */}
+      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto">
         {!hasMessages ? (
-          /* Empty state */
+          /* Empty State */
           <div className="flex flex-col items-center justify-center h-full px-6">
-            <div className="w-16 h-16 rounded-2xl bg-panel flex items-center justify-center mb-6">
+            <div className="w-16 h-16 rounded-2xl bg-panel flex items-center justify-center mb-6 shadow-md">
               <svg className="w-8 h-8 text-text-on-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-text-primary mb-1">Agent Moew</h2>
-            <p className="text-sm text-text-secondary mb-8">AI Agent thông minh, sẵn sàng hỗ trợ bạn</p>
+            <h2 className="text-2xl font-bold text-text-primary mb-1 tracking-tight">Agent Moew</h2>
+            <p className="text-sm text-text-secondary mb-8">AI Agent thông minh tích hợp công cụ & LangGraph</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-xl">
               {EXAMPLE_PROMPTS.map((prompt, i) => (
                 <button
                   key={i}
                   onClick={() => handleExampleClick(prompt)}
-                  className="text-left p-3.5 rounded-xl border border-border bg-surface hover:bg-surface-alt hover:border-border-strong transition-all duration-150 text-sm text-text-secondary hover:text-text-primary group"
+                  className="text-left p-3.5 rounded-xl border border-border bg-surface hover:bg-surface-alt hover:border-border-strong transition-all duration-150 text-sm text-text-secondary hover:text-text-primary group shadow-xs hover:shadow-sm"
                 >
                   <span className="line-clamp-2">{prompt}</span>
                 </button>
@@ -272,57 +284,33 @@ export default function ChatWindow({
             </div>
           </div>
         ) : (
-          /* Message list */
-          <div className="max-w-3xl mx-auto px-6 py-6 space-y-2">
+          /* Message List */
+          <div className="max-w-3xl mx-auto px-6 py-6 space-y-4">
             {messages.map((msg) => (
-              <MessageBubble key={msg.id} content={msg.content} isUser={msg.isUser} />
+              <MessageBubble
+                key={msg.id}
+                content={msg.content}
+                isUser={msg.isUser}
+                isStreaming={msg.isStreaming}
+                toolCalls={msg.toolCalls}
+                thinking={msg.thinking}
+              />
             ))}
-
-            {/* Tool calls */}
-            {toolCalls.length > 0 && (
-              <div className="ml-11 space-y-2 py-1">
-                {toolCalls.map((tc, i) => (
-                  <ToolCard
-                    key={tc.id}
-                    tool={tc.tool}
-                    status={tc.status}
-                    output={tc.output}
-                    index={i}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Thinking block */}
-            {(thinking.isRunning || thinking.content) && (
-              <div className="ml-11 py-1">
-                <ThinkingBlock
-                  isRunning={thinking.isRunning}
-                  content={thinking.content}
-                />
-              </div>
-            )}
-
-            {/* Streaming message */}
-            {streamContent && (
-              <MessageBubble content={streamContent} isUser={false} isStreaming={true} />
-            )}
-
             <div ref={bottomRef} />
           </div>
         )}
       </div>
 
-      {/* Input area */}
+      {/* Input Area */}
       <div className="flex-shrink-0 border-t border-border bg-surface">
         <div className="max-w-3xl mx-auto px-4 py-4">
-          <div className="relative flex items-center gap-2 rounded-2xl border border-border bg-white shadow-sm focus-within:border-accent focus-within:ring-1 focus-within:ring-accent/20 transition-all duration-150">
+          <div className="relative flex items-center gap-2 rounded-2xl border border-border bg-white shadow-xs focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20 transition-all duration-150">
             <textarea
               ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isLoading ? "Agent đang xử lý..." : "Hỏi agent bất cứ điều gì..."}
+              placeholder={isLoading ? "Agent đang suy nghĩ & thực thi công cụ..." : "Hỏi agent bất cứ điều gì..."}
               rows={1}
               className="flex-1 resize-none bg-transparent px-4 py-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none min-h-[44px] max-h-[200px]"
               disabled={isLoading}
@@ -330,14 +318,14 @@ export default function ChatWindow({
             <button
               onClick={handleSend}
               disabled={isLoading || !input.trim()}
-              className="flex-shrink-0 w-9 h-9 rounded-xl bg-accent hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors duration-150"
+              className="flex-shrink-0 w-9 h-9 mr-1.5 rounded-xl bg-accent hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-150 shadow-xs"
             >
               <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
           </div>
-          <p className="text-xs text-text-tertiary text-center mt-2">
+          <p className="text-[11px] text-text-tertiary text-center mt-2">
             Nhấn <kbd className="px-1 py-0.5 rounded bg-surface-alt border border-border text-[10px] font-mono">Enter</kbd> để gửi, <kbd className="px-1 py-0.5 rounded bg-surface-alt border border-border text-[10px] font-mono">Shift+Enter</kbd> xuống dòng
           </p>
         </div>
@@ -345,5 +333,6 @@ export default function ChatWindow({
     </div>
   );
 }
+
 
 

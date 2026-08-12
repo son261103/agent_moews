@@ -18,11 +18,20 @@ def reflection_node(state: dict) -> dict:
             "reflection_round": round_num,
         }
 
-    # Placeholder: in production this would use an LLM to evaluate quality.
-    # For now it always requests one rewrite so the loop has a chance to improve.
+    messages = state.get("messages", [])
+    if messages:
+        last_msg = messages[-1]
+        content = getattr(last_msg, "content", str(last_msg))
+        if content and len(str(content).strip()) > 0 and not str(content).startswith("Lỗi:"):
+            return {
+                "needs_rewrite": False,
+                "feedback": "Output quality is good",
+                "reflection_round": round_num + 1,
+            }
+
     assessment = QualityAssessment(
-        score=3,
-        feedback="Output may be incomplete or unclear",
+        score=2,
+        feedback="Output may be empty or incomplete",
         needs_rewrite=True,
     )
     return {
@@ -30,3 +39,4 @@ def reflection_node(state: dict) -> dict:
         "feedback": assessment.feedback,
         "reflection_round": round_num + 1,
     }
+

@@ -42,8 +42,9 @@ async def get_news(category: str = "tin-moi-nhat", limit: int = 5) -> str:
     if url is None:
         return f"Không hỗ trợ chuyên mục '{category}'. Chọn: {', '.join(VNEXPRESS_CATEGORIES)}"
     limit = max(1, min(limit, 8))
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, headers=headers) as client:
             response = await client.get(url)
             response.raise_for_status()
         root = ET.fromstring(response.text)

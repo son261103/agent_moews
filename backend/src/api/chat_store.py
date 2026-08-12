@@ -20,22 +20,39 @@ class ChatStore:
                 thread_id TEXT NOT NULL,
                 role TEXT NOT NULL,
                 content TEXT NOT NULL,
-                timestamp TEXT NOT NULL
+                timestamp TEXT NOT NULL,
+                tool_calls TEXT,
+                thinking TEXT
             )
             """
         )
+        try:
+            await self._conn.execute("ALTER TABLE messages ADD COLUMN tool_calls TEXT")
+        except Exception:
+            pass
+        try:
+            await self._conn.execute("ALTER TABLE messages ADD COLUMN thinking TEXT")
+        except Exception:
+            pass
+
         await self._conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(thread_id, timestamp)"
         )
         await self._conn.commit()
 
     async def add_message(
-        self, thread_id: str, role: str, content: str, timestamp: str
+        self,
+        thread_id: str,
+        role: str,
+        content: str,
+        timestamp: str,
+        tool_calls: str | None = None,
+        thinking: str | None = None,
     ) -> None:
         assert self._conn is not None, "ChatStore is not connected"
         await self._conn.execute(
-            "INSERT INTO messages (thread_id, role, content, timestamp) VALUES (?, ?, ?, ?)",
-            (thread_id, role, content, timestamp),
+            "INSERT INTO messages (thread_id, role, content, timestamp, tool_calls, thinking) VALUES (?, ?, ?, ?, ?, ?)",
+            (thread_id, role, content, timestamp, tool_calls, thinking),
         )
         await self._conn.commit()
 
@@ -63,7 +80,7 @@ class ChatStore:
     async def get_thread(self, thread_id: str) -> ThreadDetail | None:
         assert self._conn is not None, "ChatStore is not connected"
         cursor = await self._conn.execute(
-            "SELECT role, content, timestamp FROM messages "
+            "SELECT role, content, timestamp, tool_calls, thinking FROM messages "
             "WHERE thread_id = ? ORDER BY timestamp ASC",
             (thread_id,),
         )
@@ -71,12 +88,24 @@ class ChatStore:
         await cursor.close()
         if not rows:
             return None
-        return ThreadDetail(
-            thread_id=thread_id,
-            messages=[
-                ThreadMessage(role=r[0], content=r[1], timestamp=r[2]) for r in rows
-            ],
-        )
+
+        import json
+
+        messages = []
+        for r in rows:
+            role, content, ts, raw_tc, raw_think = r[0], r[1], r[2], r[3], r[4]
+            tc = json.loads(raw_tc) if raw_tc else None
+            think = json.loads(raw_think) if raw_think else None
+            messages.append(
+                ThreadMessage(
+                    role=role,
+                    content=content,
+                    timestamp=ts,
+                    tool_calls=tc,
+                    thinking=think,
+                )
+            )
+        return ThreadDetail(thread_id=thread_id, messages=messages)
 
     async def delete_thread(self, thread_id: str) -> None:
         assert self._conn is not None, "ChatStore is not connected"

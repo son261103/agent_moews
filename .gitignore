@@ -36,3 +36,6 @@ workspace/
 .idea/
 .vscode/
 *.swp
+
+# Opencode / AI tools
+.opencode/

@@ -19,7 +19,7 @@ DEFAULT_CITY = ("Hà Nội", 21.0285, 105.8542)
 async def get_weather(city: str = "Hà Nội") -> str:
     """Get the current weather for a city. Works with Vietnamese city names like 'Hà Nội' or 'TP Hồ Chí Minh'."""
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
             geo_resp = await client.get(
                 "https://geocoding-api.open-meteo.com/v1/search",
                 params={"name": city, "count": 1, "language": "vi", "format": "json"},

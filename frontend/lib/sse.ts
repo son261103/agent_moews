@@ -2,9 +2,11 @@ export interface StreamEvent {
   type: "token" | "tool_start" | "tool_end" | "plan" | "reflection" | "done" | "error" | "reset";
   content?: string;
   tool?: string;
+  input?: any;
   output?: string;
   message?: string;
   status?: "start" | "end";
+  run_id?: string;
 }
 
 export function streamChat(

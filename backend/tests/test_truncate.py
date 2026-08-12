@@ -7,13 +7,14 @@ def test_truncate_text_short_unchanged():
 
 
 def test_truncate_text_long_has_marker():
-    text = "x" * 5000
+    text = "x" * 6000
     result = truncate_text(text)
-    assert result.startswith("x" * 2000)
+    assert result.startswith("x" * 4000)
     assert "truncated" in result
     assert len(result) < len(text)
 
 
 def test_truncate_text_at_exact_limit_unchanged():
-    text = "x" * 2000
+    text = "x" * 4000
     assert truncate_text(text) == text
+

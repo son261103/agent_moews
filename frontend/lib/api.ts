@@ -36,3 +36,13 @@ export async function getThread(threadId: string): Promise<ThreadDetail | null> 
     return null;
   }
 }
+
+export async function deleteThread(threadId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_URL}/threads/${threadId}`, { method: "DELETE" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
