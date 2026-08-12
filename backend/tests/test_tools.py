@@ -200,3 +200,33 @@ class TestNews:
 
         result = await get_news.ainvoke({"category": "khong-co"})
         assert "Không hỗ trợ" in result
+
+
+class TestWeather:
+    @patch("src.tools.weather_tools.httpx.AsyncClient")
+    async def test_get_weather_returns_summary(self, mock_client_class):
+        from src.tools.weather_tools import get_weather
+
+        mock_client = AsyncMock()
+        mock_client_class.return_value.__aenter__.return_value = mock_client
+
+        geo_response = MagicMock()
+        geo_response.json.return_value = {
+            "results": [{"latitude": 21.0285, "longitude": 105.8542, "name": "Hà Nội"}]
+        }
+        weather_response = MagicMock()
+        weather_response.json.return_value = {
+            "current": {
+                "temperature_2m": 30.5,
+                "apparent_temperature": 32.1,
+                "relative_humidity_2m": 70,
+                "weather_code": 1,
+                "wind_speed_10m": 12,
+            }
+        }
+        mock_client.get.side_effect = [geo_response, weather_response]
+
+        result = await get_weather.ainvoke({})
+        assert "Hà Nội" in result
+        assert "30.5" in result
+        assert "ít mây" in result
