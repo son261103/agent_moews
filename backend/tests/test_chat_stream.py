@@ -8,7 +8,7 @@ from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResu
 
 
 class FakeToolLLM(BaseChatModel):
-    """Turn 0 -> tool call to get_current_time, turn 1+ -> final answer."""
+    """Turn 0 -> tool call to info_agent, turn 1+ -> final answer."""
 
     _n: int = 0
 
@@ -24,7 +24,7 @@ class FakeToolLLM(BaseChatModel):
             return AIMessage(
                 content="",
                 tool_calls=[
-                    {"name": "get_current_time", "args": {}, "id": "call_1"}
+                    {"name": "info_agent", "args": {"query": "hello"}, "id": "call_1"}
                 ],
             )
         return AIMessage(content="Final answer text.")
@@ -107,7 +107,7 @@ def test_chat_stream_emits_tool_names_and_single_done(tmp_path):
 
     assert tool_starts, "expected at least one tool_start event"
     assert all(e["tool"] for e in tool_starts), "tool name must not be empty"
-    assert any(e["tool"] == "get_current_time" for e in tool_starts)
+    assert any(e["tool"] == "info_agent" for e in tool_starts)
     assert len(dones) == 1, f"expected exactly one done, got {len(dones)}"
     assert any("Final answer text." in e["content"] for e in tokens)
 
@@ -165,7 +165,15 @@ def test_chat_stream_async_tool_succeeds(tmp_path):
                 return AIMessage(
                     content="",
                     tool_calls=[
-                        {"name": "get_weather", "args": {"city": "Hà Nội"}, "id": "call_1"}
+                        {"name": "info_agent", "args": {"query": "thời tiết Hà Nội"}, "id": "call_1"}
+                    ],
+                )
+            if n == 1:
+                # Inside the info_agent sub-agent, which binds the info tools.
+                return AIMessage(
+                    content="",
+                    tool_calls=[
+                        {"name": "get_weather", "args": {"city": "Hà Nội"}, "id": "call_2"}
                     ],
                 )
             return AIMessage(content="Final answer text.")
@@ -199,7 +207,8 @@ def test_chat_stream_async_tool_succeeds(tmp_path):
             }
         }
         # The reflection loop can run up to 3 rounds, each invoking the agent
-        # and the researcher sub-agent (2 tool calls -> 4 GETs per round).
+        # and the info_agent sub-agent (1 top-level tool call + 1 sub-agent
+        # get_weather call -> 2 GETs per round).
         mock_client.get.side_effect = [geo_response, weather_response] * 20
 
         events = []
@@ -217,5 +226,5 @@ def test_chat_stream_async_tool_succeeds(tmp_path):
     dones = [e for e in events if e["type"] == "done"]
 
     assert not errors, f"stream errored: {[e.get('message') for e in errors]}"
-    assert any(e["tool"] == "get_weather" for e in tool_ends)
+    assert any(e["tool"] == "info_agent" for e in tool_ends)
     assert len(dones) == 1
