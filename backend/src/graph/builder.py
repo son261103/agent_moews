@@ -4,22 +4,21 @@ from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 
 from src.agents.reflection import reflection_node
-from src.agents.sub_agents import sub_agents
+from src.agents.supervisor import build_supervisor_tools
 from src.config.settings import Settings
 from src.graph.checkpointer import get_checkpointer
 from src.graph.state import AgentState
 from src.graph.trim import trim_node
 from src.llm.factory import create_llm
-from src.tools import get_all_tools
 
 
 async def build_graph(settings: Settings):
     builder = StateGraph(AgentState)
 
     llm = create_llm(settings)
-    all_tools = get_all_tools() + sub_agents
-    llm_with_tools = llm.bind_tools(all_tools)
-    tool_node = ToolNode(all_tools)
+    supervisor_tools = build_supervisor_tools(llm)
+    llm_with_tools = llm.bind_tools(supervisor_tools)
+    tool_node = ToolNode(supervisor_tools)
     checkpointer = await get_checkpointer(settings)
 
     # 1. Primary ReAct Agent Node

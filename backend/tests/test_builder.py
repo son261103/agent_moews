@@ -16,3 +16,39 @@ async def test_build_graph_returns_runnable(tmp_path):
     assert graph is not None
     assert hasattr(graph, "astream_events")
     await graph.checkpointer.conn.close()
+
+
+@pytest.mark.asyncio
+async def test_build_graph_uses_supervisor_tools(tmp_path):
+    from unittest.mock import patch
+
+    from langchain_core.tools import tool
+
+    from src.config.settings import Settings
+    from src.graph.builder import build_graph
+
+    @tool
+    def fake_research_tool(query: str) -> str:
+        """Fake research."""
+        return ""
+
+    @tool
+    def fake_info_tool(query: str) -> str:
+        """Fake info."""
+        return ""
+
+    test_settings = Settings(
+        openai_api_key="sk-test",
+        tavily_api_key="tvly-test",
+        langsmith_api_key="ls-test",
+        db_path=str(tmp_path / "test.db"),
+    )
+    fake_tools = [fake_research_tool, fake_info_tool]
+    with patch(
+        "src.graph.builder.build_supervisor_tools", return_value=fake_tools
+    ) as mock_build:
+        graph = await build_graph(test_settings)
+
+    mock_build.assert_called_once()
+    assert graph is not None
+    await graph.checkpointer.conn.close()
