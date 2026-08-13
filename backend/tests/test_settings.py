@@ -58,3 +58,12 @@ def test_settings_reads_langsmith_endpoint_from_env(monkeypatch):
     monkeypatch.setenv("LANGSMITH_ENDPOINT", "https://eu.smith.langchain.com")
     s = Settings(openai_api_key="sk-test", tavily_api_key="tvly-test")
     assert s.langsmith_endpoint == "https://eu.smith.langchain.com"
+
+
+def test_openapi_and_skills_settings_defaults():
+    from src.config.settings import Settings
+    s = Settings()
+    assert s.openapi_spec_path is None
+    assert s.openapi_base_url is None
+    assert s.openapi_token is None
+    assert s.skills_dir == "skills"

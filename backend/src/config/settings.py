@@ -27,5 +27,13 @@ class Settings(BaseSettings):
     db_path: str = "data/agent_moew.db"
     workspace_dir: str = "workspace"
 
+    # OpenAPI file-based tools (optional; empty = disabled)
+    openapi_spec_path: Optional[str] = None
+    openapi_base_url: Optional[str] = None
+    openapi_token: Optional[str] = None
+
+    # Skills
+    skills_dir: str = "skills"
+
 
 settings = Settings()
