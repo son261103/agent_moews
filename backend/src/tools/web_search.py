@@ -3,9 +3,11 @@ import json
 from langchain_core.tools import tool
 from langchain_tavily import TavilySearch
 
+from src.tools.registry import register_tool
 from src.tools.truncate import truncate_text
 
 
+@register_tool(group="research")
 @tool
 def web_search(query: str) -> str:
     """Search the web for information using Tavily API."""

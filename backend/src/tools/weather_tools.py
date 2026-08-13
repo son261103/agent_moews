@@ -1,6 +1,8 @@
 import httpx
 from langchain_core.tools import tool
 
+from src.tools.registry import register_tool
+
 WEATHER_CODES = {
     0: "Trời quang", 1: "Trời ít mây", 2: "Trời có mây rải rác", 3: "Trời nhiều mây",
     45: "Sương mù", 48: "Sương mù đóng băng",
@@ -15,6 +17,7 @@ WEATHER_CODES = {
 DEFAULT_CITY = ("Hà Nội", 21.0285, 105.8542)
 
 
+@register_tool(group="info")
 @tool
 async def get_weather(city: str = "Hà Nội") -> str:
     """Get the current weather for a city. Works with Vietnamese city names like 'Hà Nội' or 'TP Hồ Chí Minh'."""

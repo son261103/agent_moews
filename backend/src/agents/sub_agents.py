@@ -1,5 +1,5 @@
 from langchain_core.tools import tool
-from src.tools import web_search
+from src.tools.web_search import web_search
 
 
 @tool

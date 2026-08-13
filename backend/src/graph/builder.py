@@ -10,14 +10,14 @@ from src.graph.checkpointer import get_checkpointer
 from src.graph.state import AgentState
 from src.graph.trim import trim_node
 from src.llm.factory import create_llm
-from src.tools import get_current_time, get_news, get_weather, web_fetch, web_search
+from src.tools import get_all_tools
 
 
 async def build_graph(settings: Settings):
     builder = StateGraph(AgentState)
 
     llm = create_llm(settings)
-    all_tools = [web_search, web_fetch, get_current_time, get_news, get_weather] + sub_agents
+    all_tools = get_all_tools() + sub_agents
     llm_with_tools = llm.bind_tools(all_tools)
     tool_node = ToolNode(all_tools)
     checkpointer = await get_checkpointer(settings)

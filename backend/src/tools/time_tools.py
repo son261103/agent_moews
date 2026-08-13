@@ -3,11 +3,14 @@ from zoneinfo import ZoneInfo
 
 from langchain_core.tools import tool
 
+from src.tools.registry import register_tool
+
 VIETNAMESE_WEEKDAYS = [
     "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ nhật",
 ]
 
 
+@register_tool(group="info")
 @tool
 def get_current_time(tz: str = "Asia/Ho_Chi_Minh") -> str:
     """Get the current date and time. Returns a Vietnamese string like 'Thứ Tư, 12/08/2026, 14:30'."""

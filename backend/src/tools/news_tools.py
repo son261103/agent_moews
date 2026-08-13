@@ -4,6 +4,7 @@ import xml.etree.ElementTree as ET
 import httpx
 from langchain_core.tools import tool
 
+from src.tools.registry import register_tool
 from src.tools.truncate import truncate_text
 
 VNEXPRESS_CATEGORIES = {
@@ -35,6 +36,7 @@ def _format_item(item: ET.Element) -> str:
     return f"{line}\n   {link}"
 
 
+@register_tool(group="info")
 @tool
 async def get_news(category: str = "tin-moi-nhat", limit: int = 5) -> str:
     """Get the latest news from VnExpress (Vietnamese). category: tin-moi-nhat (default), thoi-su, the-gioi, kinh-doanh, giai-tri, the-thao, doi-song, giao-duc, khoa-hoc."""

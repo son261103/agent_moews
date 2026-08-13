@@ -3,9 +3,11 @@ import re
 import httpx
 from langchain_core.tools import tool
 
+from src.tools.registry import register_tool
 from src.tools.truncate import truncate_text
 
 
+@register_tool(group="research")
 @tool
 async def web_fetch(url: str) -> str:
     """Fetch a web page and return its text content with HTML stripped."""
