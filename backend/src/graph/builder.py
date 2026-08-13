@@ -10,6 +10,11 @@ from src.graph.checkpointer import get_checkpointer
 from src.graph.state import AgentState
 from src.graph.trim import trim_node
 from src.llm.factory import create_llm
+from src.tools.news_tools import get_news
+from src.tools.time_tools import get_current_time
+from src.tools.weather_tools import get_weather
+from src.tools.web_fetch import web_fetch
+from src.tools.web_search import web_search
 
 
 async def build_graph(settings: Settings):
@@ -17,8 +22,9 @@ async def build_graph(settings: Settings):
 
     llm = create_llm(settings)
     supervisor_tools = build_supervisor_tools(llm)
-    llm_with_tools = llm.bind_tools(supervisor_tools)
-    tool_node = ToolNode(supervisor_tools)
+    all_tools = [web_search, web_fetch, get_current_time, get_news, get_weather] + supervisor_tools
+    llm_with_tools = llm.bind_tools(all_tools)
+    tool_node = ToolNode(all_tools)
     checkpointer = await get_checkpointer(settings)
 
     # 1. Primary ReAct Agent Node
@@ -26,7 +32,7 @@ async def build_graph(settings: Settings):
         messages = state["messages"]
         system_msg = SystemMessage(
             content=(
-                "Bạn là Agent Moew, một trợ lý AI thông minh được xây dựng 100% bằng LangGraph. "
+                "Bạn là Agent Moew"
                 "Hãy tự động chọn và thực thi các công cụ (tools) hoặc subagent khi cần thiết để hỗ trợ người dùng."
             )
         )
@@ -45,11 +51,15 @@ async def build_graph(settings: Settings):
             return "tools"
         return "reflect"
 
+    def memory_node(state: AgentState) -> AgentState:
+        return state
+
     # Add Nodes to Graph
     builder.add_node("trim_history", trim_node)
     builder.add_node("agent", agent_node)
     builder.add_node("tools", tool_node)
     builder.add_node("reflect", reflection_node)
+    builder.add_node("save_memory", memory_node)
 
     # Define Workflow Edges & Control Flow
     builder.set_entry_point("trim_history")
@@ -71,9 +81,10 @@ async def build_graph(settings: Settings):
     # Reflection & Self-Correction Edge
     builder.add_conditional_edges(
         "reflect",
-        lambda s: "trim_history" if s.get("needs_rewrite") and s.get("reflection_round", 0) < 3 else END,
-        {"trim_history": "trim_history", END: END},
+        lambda s: "trim_history" if s.get("needs_rewrite") and s.get("reflection_round", 0) < 3 else "save_memory",
+        {"trim_history": "trim_history", "save_memory": "save_memory"},
     )
+    builder.add_edge("save_memory", END)
 
     return builder.compile(checkpointer=checkpointer)
 
