@@ -56,3 +56,15 @@ async def test_create_sub_agent_skips_tool_message_when_ended_on_tool():
 
     result = await agent_tool.ainvoke({"query": "gio"})
     assert result == "real answer"
+
+
+def test_build_supervisor_tools_one_per_group():
+    from src.agents.supervisor import build_supervisor_tools
+
+    fake_llm = MagicMock()
+    with patch("src.agents.supervisor.create_react_agent") as mock_cra:
+        tools = build_supervisor_tools(fake_llm)
+
+    assert {t.name for t in tools} == {"research_agent", "info_agent"}
+    assert all(t.description for t in tools)
+    assert mock_cra.call_count == 2
