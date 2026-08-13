@@ -10,7 +10,10 @@ from src.graph.checkpointer import get_checkpointer
 from src.graph.state import AgentState
 from src.graph.trim import trim_node
 from src.llm.factory import create_llm
+from src.skills.registry import build_skills_discovery
+from src.skills.tools import list_skills, load_skill
 from src.tools.news_tools import get_news
+from src.tools.openapi_loader import load_openapi_tools
 from src.tools.time_tools import get_current_time
 from src.tools.weather_tools import get_weather
 from src.tools.web_fetch import web_fetch
@@ -22,7 +25,19 @@ async def build_graph(settings: Settings):
 
     llm = create_llm(settings)
     supervisor_tools = build_supervisor_tools(llm)
-    all_tools = [web_search, web_fetch, get_current_time, get_news, get_weather] + supervisor_tools
+    openapi_tools = []
+    if settings.openapi_spec_path:
+        openapi_tools = load_openapi_tools(
+            settings.openapi_spec_path,
+            base_url=settings.openapi_base_url,
+            token=settings.openapi_token,
+        )
+    all_tools = (
+        [web_search, web_fetch, get_current_time, get_news, get_weather]
+        + openapi_tools
+        + [load_skill, list_skills]
+        + supervisor_tools
+    )
     llm_with_tools = llm.bind_tools(all_tools)
     tool_node = ToolNode(all_tools)
     checkpointer = await get_checkpointer(settings)
@@ -30,10 +45,15 @@ async def build_graph(settings: Settings):
     # 1. Primary ReAct Agent Node
     async def agent_node(state: AgentState, config: RunnableConfig) -> dict:
         messages = state["messages"]
+        skills_section = ""
+        discovery = build_skills_discovery()
+        if discovery:
+            skills_section = f"\n\nAvailable skills:\n{discovery}\nGọi load_skill để đọc hướng dẫn chi tiết."
         system_msg = SystemMessage(
             content=(
                 "Bạn là Agent Moew"
                 "Hãy tự động chọn và thực thi các công cụ (tools) hoặc subagent khi cần thiết để hỗ trợ người dùng."
+                + skills_section
             )
         )
         has_system = any(isinstance(m, SystemMessage) for m in messages)
