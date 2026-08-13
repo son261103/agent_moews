@@ -39,3 +39,6 @@ workspace/
 
 # Opencode / AI tools
 .opencode/
+
+# OpenAPI spec files (large, environment-specific)
+backend/specs/
