@@ -54,20 +54,9 @@ async def test_build_graph_uses_supervisor_tools(tmp_path):
     await graph.checkpointer.conn.close()
 
 
-def test_build_graph_includes_skill_tools(tmp_path, monkeypatch):
-    from src.skills.registry import get_skill_registry
+def test_build_graph_includes_skill_tools():
     from src.skills.tools import list_skills, load_skill
     from src.tools.registry import get_all_tools
 
-    d = tmp_path / "demo"
-    d.mkdir()
-    (d / "SKILL.md").write_text(
-        "---\nname: demo\ndescription: Demo skill\n---\n# Demo", encoding="utf-8"
-    )
-    monkeypatch.setattr("src.skills.registry.settings.skills_dir", str(tmp_path))
-    get_skill_registry.cache_clear()
-    try:
-        names = {t.name for t in get_all_tools()}
-        assert "load_skill" in names and "list_skills" in names
-    finally:
-        get_skill_registry.cache_clear()
+    names = {t.name for t in get_all_tools()}
+    assert "load_skill" in names and "list_skills" in names

@@ -32,8 +32,5 @@ class Settings(BaseSettings):
     openapi_base_url: Optional[str] = None
     openapi_token: Optional[str] = None
 
-    # Skills
-    skills_dir: str = "skills"
-
 
 settings = Settings()

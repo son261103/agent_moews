@@ -1,6 +1,9 @@
+"""DB-backed skill registry (skills stored via AdminStore, not files)."""
+
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from typing import Callable
 
 import yaml
 
@@ -11,11 +14,11 @@ from src.config.settings import settings
 class SkillInfo:
     name: str
     description: str
-    path: Path
     content: str = ""
+    path: Path | None = None
 
 
-def _parse_frontmatter(text: str) -> dict:
+def parse_frontmatter(text: str) -> dict:
     """Return frontmatter dict, or {} if missing/malformed."""
     if not text.startswith("---"):
         return {}
@@ -29,50 +32,48 @@ def _parse_frontmatter(text: str) -> dict:
     return data if isinstance(data, dict) else {}
 
 
-def _strip_frontmatter(text: str) -> str:
-    if not text.startswith("---"):
-        return text
-    end = text.find("\n---", 3)
-    if end == -1:
-        return text
-    return text[end + 4:].lstrip("\n")
-
-
 class SkillRegistry:
-    """Scan skills/*/SKILL.md and expose name/description/content."""
+    """Expose skills stored in the DB (via AdminStore)."""
 
-    def __init__(self, root: Path) -> None:
-        self._skills: dict[str, SkillInfo] = {}
-        for skill_dir in sorted(root.glob("*/")):
-            skill_file = skill_dir / "SKILL.md"
-            if not skill_file.is_file():
-                continue
-            text = skill_file.read_text(encoding="utf-8")
-            fm = _parse_frontmatter(text)
-            name = fm.get("name") or skill_dir.name
-            description = fm.get("description", "")
-            if not description:
-                continue  # require description so the LLM can discover it
-            self._skills[name] = SkillInfo(
-                name=name, description=description, path=skill_file
-            )
+    def __init__(self, store_factory: Callable[[], "AdminStore"]) -> None:
+        self._store_factory = store_factory
+        self._store: "AdminStore | None" = None
 
-    def list_skills(self) -> list[SkillInfo]:
-        return list(self._skills.values())
+    async def _ensure_store(self) -> "AdminStore":
+        if self._store is None:
+            from src.api.admin_store import AdminStore
 
-    def load(self, name: str) -> str:
-        if name not in self._skills:
+            self._store = self._store_factory()
+            await self._store.connect()
+        return self._store
+
+    async def list_skills(self) -> list[SkillInfo]:
+        store = await self._ensure_store()
+        return await store.list_skills()
+
+    async def load(self, name: str) -> str:
+        store = await self._ensure_store()
+        skill = await store.get_skill(name)
+        if skill is None:
             raise KeyError(f"Skill not found: {name}")
-        return _strip_frontmatter(self._skills[name].path.read_text(encoding="utf-8"))
+        return skill.content
+
+
+def _default_store_factory() -> "AdminStore":
+    from src.api.admin_store import AdminStore
+
+    return AdminStore(settings.db_path)
 
 
 @lru_cache
 def get_skill_registry() -> SkillRegistry:
-    """Cached for the process lifetime; skills added at runtime require a restart to be discovered."""
-    return SkillRegistry(Path(settings.skills_dir))
+    """Cached for the process lifetime; DB queries run per call, so new/edited
+    skills are visible immediately. Point at a different DB via settings.db_path
+    and call get_skill_registry.cache_clear()."""
+    return SkillRegistry(_default_store_factory)
 
 
-def build_skills_discovery() -> str:
+async def build_skills_discovery() -> str:
     """Discovery section for the system prompt: 'name: description' lines."""
-    skills = get_skill_registry().list_skills()
+    skills = await get_skill_registry().list_skills()
     return "\n".join(f"{s.name}: {s.description}" for s in skills)

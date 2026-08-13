@@ -1,55 +1,51 @@
-from pathlib import Path
+import asyncio
 
 import pytest
 
-from src.skills.registry import SkillRegistry, build_skills_discovery
+from src.api.admin_store import AdminStore
+from src.skills.registry import build_skills_discovery, parse_frontmatter
 
 
-def _write_skill(root: Path, name: str, description: str, body: str = "# Steps\n1. Do it") -> None:
-    d = root / name
-    d.mkdir(parents=True, exist_ok=True)
-    (d / "SKILL.md").write_text(
-        f"---\nname: {name}\ndescription: {description}\n---\n{body}", encoding="utf-8"
-    )
+def _reg(tmp_path):
+    """Return a registry wired to a fresh DB."""
+    from src.skills.registry import get_skill_registry
+
+    import src.config.settings as settings_module
+
+    settings_module.settings.db_path = str(tmp_path / "skills.db")
+    get_skill_registry.cache_clear()
+    return get_skill_registry()
 
 
-def test_scan_lists_skills_in_sorted_order(tmp_path):
-    _write_skill(tmp_path, "beta", "B skill")
-    _write_skill(tmp_path, "alpha", "A skill")
-    reg = SkillRegistry(tmp_path)
-    names = [s.name for s in reg.list_skills()]
-    assert names == ["alpha", "beta"]
+def test_list_skills_sorted_and_load(tmp_path):
+    reg = _reg(tmp_path)
+    store = AdminStore(str(tmp_path / "skills.db"))
+    asyncio.run(store.connect())
+    asyncio.run(store.create_skill("beta", "B skill", "body-b"))
+    asyncio.run(store.create_skill("alpha", "A skill", "body-a"))
+    asyncio.run(store.close())
 
-
-def test_scan_skips_missing_description(tmp_path):
-    d = tmp_path / "no-desc"
-    d.mkdir()
-    (d / "SKILL.md").write_text("---\nname: no-desc\n---\nbody", encoding="utf-8")
-    reg = SkillRegistry(tmp_path)
-    assert reg.list_skills() == []
-
-
-def test_load_returns_body_without_frontmatter(tmp_path):
-    _write_skill(tmp_path, "demo", "Demo skill", "# Demo\nSteps here")
-    reg = SkillRegistry(tmp_path)
-    content = reg.load("demo")
-    assert content == "# Demo\nSteps here"
-    assert "name:" not in content
+    skills = asyncio.run(reg.list_skills())
+    assert [s.name for s in skills] == ["alpha", "beta"]
+    assert asyncio.run(reg.load("alpha")) == "body-a"
 
 
 def test_load_unknown_skill_raises_key_error(tmp_path):
-    reg = SkillRegistry(tmp_path)
+    reg = _reg(tmp_path)
     with pytest.raises(KeyError, match="demo"):
-        reg.load("demo")
+        asyncio.run(reg.load("demo"))
 
 
-def test_build_skills_discovery(tmp_path, monkeypatch):
-    from src.skills.registry import get_skill_registry
+def test_build_skills_discovery(tmp_path):
+    reg = _reg(tmp_path)
+    store = AdminStore(str(tmp_path / "skills.db"))
+    asyncio.run(store.connect())
+    asyncio.run(store.create_skill("demo", "Demo skill", "body"))
+    asyncio.run(store.close())
+    assert asyncio.run(build_skills_discovery()) == "demo: Demo skill"
 
-    _write_skill(tmp_path, "demo", "Demo skill")
-    monkeypatch.setattr("src.skills.registry.settings.skills_dir", str(tmp_path))
-    get_skill_registry.cache_clear()
-    try:
-        assert build_skills_discovery() == "demo: Demo skill"
-    finally:
-        get_skill_registry.cache_clear()
+
+def test_parse_frontmatter_handles_malformed():
+    assert parse_frontmatter("no frontmatter") == {}
+    assert parse_frontmatter("---\nname: x\n---\nbody") == {"name": "x"}
+    assert parse_frontmatter("---\n{{{\n---\nbody") == {}

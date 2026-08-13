@@ -1,39 +1,30 @@
-from src.skills.registry import get_skill_registry
+import asyncio
+
 from src.skills.tools import list_skills, load_skill
 
 
-def test_list_skills_formats(tmp_path, monkeypatch):
-    d = tmp_path / "demo"
-    d.mkdir()
-    (d / "SKILL.md").write_text(
-        "---\nname: demo\ndescription: Demo skill\n---\n# Demo", encoding="utf-8"
-    )
-    monkeypatch.setattr("src.skills.registry.settings.skills_dir", str(tmp_path))
+def _seed(tmp_path, name="demo", description="Demo skill", content="# Demo"):
+    import src.config.settings as settings_module
+    from src.api.admin_store import AdminStore
+    from src.skills.registry import get_skill_registry
+
+    settings_module.settings.db_path = str(tmp_path / "skills.db")
     get_skill_registry.cache_clear()
-    try:
-        assert list_skills.invoke({}) == "demo: Demo skill"
-    finally:
-        get_skill_registry.cache_clear()
+    store = AdminStore(str(tmp_path / "skills.db"))
+    asyncio.run(store.connect())
+    asyncio.run(store.create_skill(name, description, content))
+    asyncio.run(store.close())
 
 
-def test_load_skill_returns_content(tmp_path, monkeypatch):
-    d = tmp_path / "demo"
-    d.mkdir()
-    (d / "SKILL.md").write_text(
-        "---\nname: demo\ndescription: Demo skill\n---\n# Steps\n1. Do X", encoding="utf-8"
-    )
-    monkeypatch.setattr("src.skills.registry.settings.skills_dir", str(tmp_path))
-    get_skill_registry.cache_clear()
-    try:
-        assert load_skill.invoke({"name": "demo"}) == "# Steps\n1. Do X"
-    finally:
-        get_skill_registry.cache_clear()
+def test_list_skills_formats(tmp_path):
+    _seed(tmp_path)
+    assert asyncio.run(list_skills.ainvoke({})) == "demo: Demo skill"
 
 
-def test_load_unknown_skill_returns_error_string(tmp_path, monkeypatch):
-    monkeypatch.setattr("src.skills.registry.settings.skills_dir", str(tmp_path))
-    get_skill_registry.cache_clear()
-    try:
-        assert load_skill.invoke({"name": "nope"}) == "Skill not found: nope"
-    finally:
-        get_skill_registry.cache_clear()
+def test_load_skill_returns_content(tmp_path):
+    _seed(tmp_path, content="# Steps\n1. Do X")
+    assert asyncio.run(load_skill.ainvoke({"name": "demo"})) == "# Steps\n1. Do X"
+
+
+def test_load_unknown_skill_returns_error_string(tmp_path):
+    assert asyncio.run(load_skill.ainvoke({"name": "nope"})) == "Skill not found: nope"

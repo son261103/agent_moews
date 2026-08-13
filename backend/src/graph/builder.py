@@ -46,7 +46,7 @@ async def build_graph(settings: Settings):
     async def agent_node(state: AgentState, config: RunnableConfig) -> dict:
         messages = state["messages"]
         skills_section = ""
-        discovery = build_skills_discovery()
+        discovery = await build_skills_discovery()
         if discovery:
             skills_section = f"\n\nAvailable skills:\n{discovery}\nGọi load_skill để đọc hướng dẫn chi tiết."
         system_msg = SystemMessage(

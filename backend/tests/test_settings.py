@@ -66,4 +66,3 @@ def test_openapi_and_skills_settings_defaults():
     assert s.openapi_spec_path is None
     assert s.openapi_base_url is None
     assert s.openapi_token is None
-    assert s.skills_dir == "skills"
