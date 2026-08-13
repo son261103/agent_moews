@@ -12,6 +12,7 @@ class SkillInfo:
     name: str
     description: str
     path: Path
+    content: str = ""
 
 
 def _parse_frontmatter(text: str) -> dict:
