@@ -3,6 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from langchain_core.messages import AIMessage, HumanMessage
 
+import src.skills.tools  # noqa: F401  (registers the "skills" group for build_supervisor_tools)
+
 
 @pytest.mark.asyncio
 async def test_create_sub_agent_returns_final_ai_message():
@@ -65,6 +67,6 @@ def test_build_supervisor_tools_one_per_group():
     with patch("src.agents.supervisor.create_react_agent") as mock_cra:
         tools = build_supervisor_tools(fake_llm)
 
-    assert {t.name for t in tools} == {"research_agent", "info_agent"}
+    assert {t.name for t in tools} == {"research_agent", "info_agent", "skills_agent"}
     assert all(t.description for t in tools)
-    assert mock_cra.call_count == 2
+    assert mock_cra.call_count == 3
