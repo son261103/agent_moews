@@ -51,7 +51,7 @@ async def build_graph(settings: Settings):
             skills_section = f"\n\nAvailable skills:\n{discovery}\nGọi load_skill để đọc hướng dẫn chi tiết."
         system_msg = SystemMessage(
             content=(
-                "Bạn là Agent Moew"
+                "Bạn là Agent Moew. "
                 "Hãy tự động chọn và thực thi các công cụ (tools) hoặc subagent khi cần thiết để hỗ trợ người dùng."
                 + skills_section
             )

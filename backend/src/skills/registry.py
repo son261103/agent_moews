@@ -67,6 +67,7 @@ class SkillRegistry:
 
 @lru_cache
 def get_skill_registry() -> SkillRegistry:
+    """Cached for the process lifetime; skills added at runtime require a restart to be discovered."""
     return SkillRegistry(Path(settings.skills_dir))
 
 
