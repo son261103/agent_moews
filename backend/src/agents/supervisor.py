@@ -1,5 +1,3 @@
-import inspect
-
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import BaseTool, tool
 from langgraph.prebuilt import create_react_agent
@@ -13,9 +11,7 @@ def create_sub_agent(
 
     @tool(name, description=description)
     async def sub_agent_tool(query: str) -> str:
-        result = graph.ainvoke({"messages": [HumanMessage(content=query)]})
-        if inspect.isawaitable(result):
-            result = await result
+        result = await graph.ainvoke({"messages": [HumanMessage(content=query)]})
         messages = result.get("messages", [])
         for msg in reversed(messages):
             if isinstance(msg, AIMessage) and getattr(msg, "content", ""):

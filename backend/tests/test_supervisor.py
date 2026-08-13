@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from langchain_core.messages import AIMessage, HumanMessage
 
@@ -8,7 +8,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 async def test_create_sub_agent_returns_final_ai_message():
     from src.agents.supervisor import create_sub_agent
 
-    fake_graph = MagicMock()
+    fake_graph = AsyncMock()
     fake_graph.ainvoke.return_value = {
         "messages": [HumanMessage(content="hi"), AIMessage(content="final answer")]
     }
@@ -37,7 +37,7 @@ async def test_create_sub_agent_returns_final_ai_message():
 async def test_create_sub_agent_skips_tool_message_when_ended_on_tool():
     from src.agents.supervisor import create_sub_agent
 
-    fake_graph = MagicMock()
+    fake_graph = AsyncMock()
     fake_graph.ainvoke.return_value = {
         "messages": [
             HumanMessage(content="hi"),
