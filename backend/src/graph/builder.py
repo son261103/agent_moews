@@ -45,15 +45,11 @@ async def build_graph(settings: Settings):
             return "tools"
         return "reflect"
 
-    def memory_node(state: AgentState) -> AgentState:
-        return state
-
     # Add Nodes to Graph
     builder.add_node("trim_history", trim_node)
     builder.add_node("agent", agent_node)
     builder.add_node("tools", tool_node)
     builder.add_node("reflect", reflection_node)
-    builder.add_node("save_memory", memory_node)
 
     # Define Workflow Edges & Control Flow
     builder.set_entry_point("trim_history")
@@ -75,10 +71,9 @@ async def build_graph(settings: Settings):
     # Reflection & Self-Correction Edge
     builder.add_conditional_edges(
         "reflect",
-        lambda s: "trim_history" if s.get("needs_rewrite") and s.get("reflection_round", 0) < 3 else "save_memory",
-        {"trim_history": "trim_history", "save_memory": "save_memory"},
+        lambda s: "trim_history" if s.get("needs_rewrite") and s.get("reflection_round", 0) < 3 else END,
+        {"trim_history": "trim_history", END: END},
     )
-    builder.add_edge("save_memory", END)
 
     return builder.compile(checkpointer=checkpointer)
 
