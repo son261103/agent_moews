@@ -1,15 +1,13 @@
-from src.tools import web_fetch, web_search
+from langchain_core.tools import tool
+from src.tools import web_search
 
-researcher_subagent = {
-    "name": "researcher",
-    "description": "Expert at finding, fetching, and synthesizing information from the web.",
-    "system_prompt": (
-        "You are a research specialist. "
-        "For any research task: search the web with web_search, "
-        "fetch relevant pages with web_fetch, synthesize findings into clear notes, "
-        "and always cite sources."
-    ),
-    "tools": [web_search, web_fetch],
-}
+
+@tool
+async def researcher_subagent(query: str) -> str:
+    """Subagent chuyên nghiên cứu & tổng hợp thông tin sâu từ web. Sử dụng khi cần tìm kiếm và phân tích thông tin phức tạp."""
+    results = await web_search.ainvoke({"query": query})
+    return f"[Báo cáo từ Researcher Subagent cho '{query}']:\n{results}"
+
 
 sub_agents = [researcher_subagent]
+
